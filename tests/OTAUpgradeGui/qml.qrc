@@ -1,0 +1,9 @@
+<RCC>
+    <qresource prefix="/">
+        <file>main.qml</file>
+        <file>ConnectingPage.qml</file>
+        <file>UpgradeStartPage.qml</file>
+        <file>InfoRow.qml</file>
+        <file>Progress.qml</file>
+    </qresource>
+</RCC>
