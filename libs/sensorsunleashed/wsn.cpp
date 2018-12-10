@@ -92,7 +92,6 @@ void wsn::stopListening(){
 }
 
 void wsn::timeout(){
-    qDebug() << "Timeout";
     qint64 nexttimeout = -1;
 
     QVector<uint16_t> delindex;
@@ -165,6 +164,15 @@ void wsn::enableTokenRemoval(uint16_t token){
     }
 }
 
+void wsn::changeTokenRef(uint16_t token, quint16 new_token_ref){
+    for(int i=0; i<activePDUs.count(); i++){
+        if(activePDUs[i]->token == token){
+            activePDUs[i]->tokenref.req = new_token_ref;
+            break;
+        }
+    }
+}
+
 void wsn::removePDU(uint16_t token){
     for(int i=0; i<activePDUs.count(); i++){
         if(activePDUs[i]->token == token && !activePDUs[i]->keep){
@@ -175,6 +183,8 @@ void wsn::removePDU(uint16_t token){
         }
     }
 }
+
+
 
 #include  <QtEndian>
 int wsn::calc_block_option(uint8_t more, uint32_t num, uint32_t msgsize, uint8_t* blockval, uint16_t* len){
@@ -319,21 +329,28 @@ void wsn::parseData(QByteArray datagram){
     if(recvPDU->validate()) {
 
         struct coapMessageStore_* storedPDUdata = findPDU(recvPDU);
-
-        qDebug() << "its type= " << recvPDU->getType();
-        if(recvPDU->getType() == CoapPDU::COAP_ACKNOWLEDGEMENT){
-            qDebug() << "its an ack";
-        }
-        else if(recvPDU->getType() == CoapPDU::COAP_RESET){
-            qDebug() << "Its a reset";
-        }
+//        CoapPDU::Type type = recvPDU->getType();
+//        qDebug() << "its type= " << type;
+//        if(type == CoapPDU::COAP_ACKNOWLEDGEMENT){
+//            qDebug() << "its an ack";
+//        }
+//        else if(type == CoapPDU::COAP_RESET){
+//            qDebug() << "Its a reset";
+//        }
 
         //We expected this message - handle it
         if(storedPDUdata != 0){
 
+            CoapPDU::Type type = recvPDU->getType();
+            if(type == CoapPDU::COAP_CONFIRMABLE){
+                send_ACK(recvPDU);
+            }
+
             nodeResponding(storedPDUdata->tokenref);
             CoapPDU::Code code = recvPDU->getCode();
-            qDebug() << "Code: " << code;
+            if(code >= CoapPDU::COAP_BAD_REQUEST)
+                qDebug() << "Code: " << code;
+
 
             /* Handle block1 - response from a put/post (Send more money) */
             options = coap_check_option(recvPDU, CoapPDU::COAP_OPTION_BLOCK1);
@@ -431,6 +448,16 @@ void wsn::parseData(QByteArray datagram){
                     }
                 }
             }   //Block2 handling
+
+//            options = coap_check_option(recvPDU, CoapPDU::COAP_OPTION_OBSERVE);
+//            if(options != 0){
+
+//                if(code == CoapPDU::COAP_CONTENT){
+//                    qDebug() << "Coap observe enabled";
+//                }
+//                else
+//                    qDebug() << "Coap observe failed";
+//            }
 
             //Its just a regular piggibacked ack
             if(!handled){

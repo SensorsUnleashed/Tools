@@ -81,7 +81,8 @@ public:
     void requestRangeMax();
 
     void requestValue();
-    QVariant requestObserve();
+
+    QVariant requestObserve(QString event);
     void abortObserve(QVariant token);
     void requestAboveEventLvl();
     void requestBelowEventLvl();
@@ -107,17 +108,16 @@ public:
     virtual QVariant getClassType(){ return "DefaultSensor.qml"; }
     virtual QVariant getActionModel() { return "DefaultActions.qml"; }
 
+    virtual void valueUpdate(cmp_object_t) {}
+    virtual int8_t getValueType(){ return CMP_TYPE_UINT8; }
+
+    cmp_object_t getLastValue(){ return LastValue; }
+    cmp_object_t getMaxLimit(){ return RangeMax; }
+    cmp_object_t getMinLimit(){ return RangeMin; }
+
 protected:
     QString uri;
-
     //uint16_t put_request(CoapPDU *pdu, enum request req, QByteArray payload);
-private:
-    node* parent;
-    QVariantMap sensorinfo;
-    //    QVector<msgid> token;
-    pairlist* pairings;
-    QHostAddress ip;
-    uint8_t init;   //Flag to indicate if sensor config has been requested or not
 
     cmp_object_t eventsActive;		//All events on or Off
     cmp_object_t LastValue;
@@ -127,10 +127,18 @@ private:
     cmp_object_t RangeMin;		//What is the minimum value this device can read
     cmp_object_t RangeMax;		//What is the maximum value this device can read
 
+private:
+    node* parent;
+    QVariantMap sensorinfo;
+    //    QVector<msgid> token;
+    pairlist* pairings;
+    QHostAddress ip;
+    uint8_t init;   //Flag to indicate if sensor config has been requested or not
+
     //uint16_t get_request(CoapPDU *pdu, enum request req, QByteArray payload=0);
 
 signals:
-    void currentValueChanged(QVariant result);
+    void currentValueChanged(quint16 token, QVariant result);
     void observe_started(QVariant result, uint16_t token);
     void observe_failed(uint16_t token);
     void aboveEventValueChanged(QVariant result);
@@ -159,7 +167,9 @@ class SENSORSUNLEASHEDSHARED_EXPORT defaultdevice : public sensor {
     Q_OBJECT
 
 public:
-    defaultdevice(node *parent, QString uri, QVariantMap attributes, sensorstore *p);
+    defaultdevice(node *parent, QString uri, QVariantMap attributes, sensorstore *p=nullptr) : sensor(parent, uri, attributes){
+
+    }
 
     QVariant getClassType(){ return "DefaultDevice.qml"; }
 
@@ -167,6 +177,23 @@ public:
     void setOn();
     void setOff();
 };
+
+class SENSORSUNLEASHEDSHARED_EXPORT pulsecounter : public sensor {
+    Q_OBJECT
+
+public:
+    pulsecounter(node *parent, QString uri, QVariantMap attributes, sensorstore *p=nullptr);
+
+    QVariant getClassType(){ return "DefaultDevice.qml"; }
+    int8_t getValueType(){ return CMP_TYPE_UINT16; }
+
+    uint16_t getLastValue(){ return LastValue.as.u16; }
+protected:
+
+
+};
+
+
 
 class SENSORSUNLEASHEDSHARED_EXPORT node : public suinterface
 {

@@ -87,7 +87,7 @@ public:
     QVariant parseMessage(coapMessageStore_* message, CoapPDU::Code code);
 
     //virtual void nodeNotResponding(msgid token){ Q_UNUSED(token); qDebug() << "Implement this";}
-    virtual void nodeResponding(msgid token){ Q_UNUSED(token); qDebug() << "Implement this";}
+    virtual void nodeResponding(msgid token){ Q_UNUSED(token);}
     virtual QVariant parseTextPlainFormat(msgid token, QByteArray payload){ qDebug() << "wsn::parseTextPlainFormat " << payload << " token=" << token.number; return QVariant(0);}
     virtual QVariant parseAppLinkFormat(msgid token, QByteArray payload) { Q_UNUSED(payload); Q_UNUSED(token); qDebug() << "wsn::parseAppLinkFormat Implement this"; return QVariant(0);}
     virtual QVariant parseAppXmlFormat(msgid token, QByteArray payload) { Q_UNUSED(payload); Q_UNUSED(token); qDebug() << "wsn::parseAppXmlFormat Implement this"; return QVariant(0);}
@@ -99,6 +99,7 @@ public:
 
     void disableTokenRemoval(uint16_t token);
     void enableTokenRemoval(uint16_t token);
+    void changeTokenRef(uint16_t token, quint16 new_token_ref);
 
     void removePDU(uint16_t token);
     int calc_block_option(uint8_t more, uint32_t num, uint32_t msgsize, uint8_t* blockval, uint16_t* len);

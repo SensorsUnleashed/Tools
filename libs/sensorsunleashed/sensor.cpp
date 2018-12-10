@@ -112,13 +112,21 @@ void sensor::requestValue(){
     get_request(pdu, req_currentValue);
 }
 
-QVariant sensor::requestObserve(){
+QVariant sensor::requestObserve(QString event){
     uint8_t id = 0;
-    const char* uristring = "su/powerrelay/above";
-    //const char* uristring = uri.toLatin1().data();
+
+    QString str = uri + "/" + event;
+    QByteArray arr = QByteArray(str.toLatin1().data(), str.length());
+
+    char* uristring = arr.data(); //events->at(event).toLatin1().data();
     CoapPDU *pdu = new CoapPDU();
-    pdu->setURI((char*)uristring, strlen(uristring));
+    pdu->setURI(uristring, str.length());
     pdu->addOption(CoapPDU::COAP_OPTION_OBSERVE, 1, &id);
+
+    char dst[100];
+    int len;
+    pdu->getURI(&dst[0], 100, &len);
+
     return get_request(pdu, req_observe);
 }
 
@@ -415,7 +423,6 @@ void sensor::nodeNotResponding(msgid token){
 }
 
 QVariant sensor::parseAppOctetFormat(msgid token, QByteArray payload, CoapPDU::Code code) {
-    qDebug() << uri << " got message!";
     int cont = 0;
     cmp_ctx_t cmp;
     cmp_init(&cmp, payload.data(), buf_reader, 0);
@@ -435,21 +442,22 @@ QVariant sensor::parseAppOctetFormat(msgid token, QByteArray payload, CoapPDU::C
                 RangeMax = obj;
                 emit rangeMaxValueReceived(result);
                 break;
-            case observe_monitor:
-            case req_currentValue:
-                LastValue = obj;
-                emit currentValueChanged(result);
-                break;
             case req_observe:
                 if(code < 128){
+                    qDebug() << "Start observing: " << uri;
                     emit observe_started(result, token.number);
                     disableTokenRemoval(token.number);
-                    //TODO: Set the token to observing
-                    //this->token[index].req = observe_monitor;
+                    changeTokenRef(token.number, observe_monitor);
                 }
                 else{
                     emit observe_failed(token.number);
+                    break;
                 }
+            [[clang::fallthrough]]; case observe_monitor:
+            [[clang::fallthrough]]; case req_currentValue:
+                LastValue = obj;
+                emit currentValueChanged(token.number, result);
+                valueUpdate(obj);
                 break;
             case req_aboveEventValue:
                 AboveEventAt = obj;
@@ -502,7 +510,8 @@ QVariant sensor::parseAppOctetFormat(msgid token, QByteArray payload, CoapPDU::C
                 //When we request a state change in the device, it always returns its current value
             case req_setCommand:
                 LastValue = obj;
-                emit currentValueChanged(result);
+                valueUpdate(obj);
+                emit currentValueChanged(token.number, result);
                 qDebug() << "req_setCommand";
                 break;
             case req_testevent:
@@ -511,6 +520,10 @@ QVariant sensor::parseAppOctetFormat(msgid token, QByteArray payload, CoapPDU::C
     }while(cmp.buf < payload.data() + payload.length() && cont);
 
     return QVariant(0);
+}
+
+pulsecounter::pulsecounter(node *parent, QString uri, QVariantMap attributes, sensorstore *p) : sensor(parent, uri, attributes){
+
 }
 
 /*************** Helpers ******************************************/
