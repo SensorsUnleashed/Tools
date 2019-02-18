@@ -1,4 +1,5 @@
 #include "node.h"
+#include <QRandomGenerator>
 
 suinterface::suinterface(QHostAddress addr) : wsn(addr){
 
@@ -9,7 +10,7 @@ suinterface::suinterface(QHostAddress addr) : wsn(addr){
 quint16 suinterface::get_request(CoapPDU *pdu, enum request req, QByteArray payload, quint8 allow_retry){
     msgid t;
     t.req = req;
-    t.number = qrand();
+    t.number = static_cast<uint16_t>(QRandomGenerator::global()->generate());
 
     pdu->setType(CoapPDU::COAP_CONFIRMABLE);
     pdu->setCode(CoapPDU::COAP_GET);
@@ -31,7 +32,7 @@ quint16 suinterface::get_request(CoapPDU *pdu, enum request req, QByteArray payl
 quint16 suinterface::put_request(CoapPDU *pdu, enum request req, QByteArray payload, quint8 allow_retry){
     msgid t;
     t.req = req;
-    t.number = qrand();
+    t.number = static_cast<uint16_t>(QRandomGenerator::global()->generate());
 
     pdu->setType(CoapPDU::COAP_CONFIRMABLE);
     pdu->setCode(CoapPDU::COAP_PUT);

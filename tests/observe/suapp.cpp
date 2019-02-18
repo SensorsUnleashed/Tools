@@ -4,10 +4,17 @@
 suapp::suapp()
 {
     QSqlDatabase Database;
-
+#if USE_SQLITE
     Database = QSqlDatabase::addDatabase("QSQLITE");
     Database.setDatabaseName("Measurements.sqlite");
+#else
+    Database = QSqlDatabase::addDatabase("QMYSQL");
+    Database.setHostName("192.168.100.100");
+    Database.setDatabaseName("Measurements");
+    Database.setUserName("loguser");
+    Database.setPassword("Martin1977");
 
+#endif
     if (!Database.open())
     {
         qDebug() << Database.lastError().text();
@@ -16,10 +23,16 @@ suapp::suapp()
     //Insert the starttime into the table fetch the next logid from the table
     QSqlQuery qry;
 
+#if USE_SQLITE
     QString querystring = "CREATE TABLE IF NOT EXISTS starttime("
                   "id INTEGER PRIMARY KEY AUTOINCREMENT UNIQUE,"
                   "Timestamp INTEGER);";
+#else
+    QString querystring = "CREATE TABLE IF NOT EXISTS `Measurements`.`starttime` ("
+      "`id` INT UNSIGNED NULL AUTO_INCREMENT, "
+      "`Timestamp` BIGINT NULL, PRIMARY KEY (`id`));";
 
+#endif
     qry.prepare(querystring);
 
     if( !qry.exec() ){

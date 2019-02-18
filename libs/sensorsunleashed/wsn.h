@@ -111,7 +111,7 @@ private:
     QHostAddress addr;
 
     uint32_t prefMsgSize;
-    uint32_t ackTimeout;
+    int ackTimeout;
     uint8_t retransmissions;
     QTimer* acktimer;
 

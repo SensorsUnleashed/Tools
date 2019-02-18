@@ -105,10 +105,13 @@ QVariant sensor::getConfigValues(){
     return list;
 }
 
-void sensor::requestValue(){
+void sensor::requestValue(char *query){
     char* uristring = uri.toLatin1().data();
     CoapPDU *pdu = new CoapPDU();
     pdu->setURI(uristring, strlen(uristring));
+    if(query){
+        pdu->addURIQuery(query);
+    }
     get_request(pdu, req_currentValue);
 }
 
@@ -118,9 +121,9 @@ QVariant sensor::requestObserve(QString event){
     QString str = uri + "/" + event;
     QByteArray arr = QByteArray(str.toLatin1().data(), str.length());
 
-    char* uristring = arr.data(); //events->at(event).toLatin1().data();
+    char* uristring = arr.data();
     CoapPDU *pdu = new CoapPDU();
-    pdu->setURI(uristring, str.length());
+    pdu->setURI(uristring, strlen(uristring));
     pdu->addOption(CoapPDU::COAP_OPTION_OBSERVE, 1, &id);
 
     char dst[100];
@@ -139,50 +142,50 @@ void sensor::abortObserve(QVariant token){
 }
 
 void sensor::requestAboveEventLvl(){   
-    const char* uristring = uri.toLatin1().data();
+    char* uristring = uri.toLatin1().data();
     CoapPDU *pdu = new CoapPDU();
-    pdu->setURI((char*)uristring, strlen(uristring));
-    pdu->addURIQuery((char*)"AboveEventAt");
+    pdu->setURI(uristring, strlen(uristring));
+    pdu->addURIQuery("AboveEventAt");
     get_request(pdu, req_aboveEventValue);
 }
 
 void sensor::requestBelowEventLvl(){   
-    const char* uristring = uri.toLatin1().data();
+    char* uristring = uri.toLatin1().data();
     CoapPDU *pdu = new CoapPDU();
-    pdu->setURI((char*)uristring, strlen(uristring));
-    pdu->addURIQuery((char*)"BelowEventAt");
+    pdu->setURI(uristring, strlen(uristring));
+    pdu->addURIQuery("BelowEventAt");
     get_request(pdu, req_belowEventValue);
 }
 
 void sensor::requestChangeEventLvl(){   
-    const char* uristring = uri.toLatin1().data();
+    char* uristring = uri.toLatin1().data();
     CoapPDU *pdu = new CoapPDU();
-    pdu->setURI((char*)uristring, strlen(uristring));
-    pdu->addURIQuery((char*)"ChangeEventAt");
+    pdu->setURI(uristring, strlen(uristring));
+    pdu->addURIQuery("ChangeEventAt");
     get_request(pdu, req_changeEventAt);
 }
 
 void sensor::requestRangeMin(){
-    const char* uristring = uri.toLatin1().data();
+    char* uristring = uri.toLatin1().data();
     CoapPDU *pdu = new CoapPDU();
-    pdu->setURI((char*)uristring, strlen(uristring));
-    pdu->addURIQuery((char*)"RangeMin");
+    pdu->setURI(uristring, strlen(uristring));
+    pdu->addURIQuery("RangeMin");
     get_request(pdu, req_RangeMinValue);
 }
 
 void sensor::requestRangeMax(){
-    const char* uristring = uri.toLatin1().data();
+    char* uristring = uri.toLatin1().data();
     CoapPDU *pdu = new CoapPDU();
-    pdu->setURI((char*)uristring, strlen(uristring));
-    pdu->addURIQuery((char*)"RangeMax");
+    pdu->setURI(uristring, strlen(uristring));
+    pdu->addURIQuery("RangeMax");
     get_request(pdu, req_RangeMaxValue);
 }
 
 void sensor::req_eventSetup(){
-    const char* uristring = uri.toLatin1().data();
+    char* uristring = uri.toLatin1().data();
     CoapPDU *pdu = new CoapPDU();
-    pdu->setURI((char*)uristring, strlen(uristring));
-    pdu->addURIQuery((char*)"getEventSetup");
+    pdu->setURI(uristring, strlen(uristring));
+    pdu->addURIQuery("getEventSetup");
     get_request(pdu, req_getEventSetup);
 }
 
@@ -207,40 +210,40 @@ void sensor::updateConfig(QVariant updatevalues){
     char* uristring = uri.toLatin1().data();
     CoapPDU *pdu = new CoapPDU();
     pdu->setURI(uristring, strlen(uristring));
-    pdu->addURIQuery((char*)"eventsetup");
+    pdu->addURIQuery("eventsetup");
 
     put_request(pdu, req_updateEventsetup, payload);
 }
 
 void sensor::flashSave(){
-    const char* uristring = uri.toLatin1().data();
+    char* uristring = uri.toLatin1().data();
     CoapPDU *pdu = new CoapPDU();
-    pdu->setURI((char*)uristring, strlen(uristring));
-    pdu->addURIQuery((char*)"saveSetup");
+    pdu->setURI(uristring, strlen(uristring));
+    pdu->addURIQuery("saveSetup");
     get_request(pdu, req_saveSetup);
 }
 
 void sensor::getpairingslist(){
-    const char* uristring = uri.toLatin1().data();
+    char* uristring = uri.toLatin1().data();
     CoapPDU *pdu = new CoapPDU();
-    pdu->setURI((char*)uristring, strlen(uristring));
-    pdu->addURIQuery((char*)"pairings");
+    pdu->setURI(uristring, strlen(uristring));
+    pdu->addURIQuery("pairings");
     get_request(pdu, req_pairingslist);
 }
 
 QVariant sensor::clearpairingslist(){
-    const char* uristring = uri.toLatin1().data();
+    char* uristring = uri.toLatin1().data();
     CoapPDU *pdu = new CoapPDU();
-    pdu->setURI((char*)uristring, strlen(uristring));
-    pdu->addURIQuery((char*)"pairRemoveAll");
-    return put_request(pdu, req_clearparings, 0);
+    pdu->setURI(uristring, strlen(uristring));
+    pdu->addURIQuery("pairRemoveAll");
+    return put_request(pdu, req_clearparings, nullptr);
 }
 
 uint16_t sensor::removeItems(QByteArray arr){
-    const char* uristring = uri.toLatin1().data();
+    char* uristring = uri.toLatin1().data();
     CoapPDU *pdu = new CoapPDU();
-    pdu->setURI((char*)uristring, strlen(uristring));
-    pdu->addURIQuery((char*)"pairRemoveIndex");
+    pdu->setURI(uristring, strlen(uristring));
+    pdu->addURIQuery("pairRemoveIndex");
 
     QByteArray payload;
     payload.resize(200);
@@ -248,12 +251,11 @@ uint16_t sensor::removeItems(QByteArray arr){
     cmp_ctx_t cmp;
     cmp_init(&cmp, payload.data(), buf_reader, buf_writer);
 
-    //uint8_t arr[2] = { 0, 2 };
     cmp_write_array(&cmp, arr.size());
     for(uint8_t i=0; i<arr.size(); i++){
         cmp_write_u8(&cmp, arr[i]);
     }
-    payload.resize((uint8_t*)cmp.buf - (uint8_t*)payload.data());
+    payload.resize(static_cast<int>(static_cast<uint8_t*>(cmp.buf) - reinterpret_cast<uint8_t*>(payload.data())));
     return put_request(pdu, req_removepairingitems, payload);
 }
 
@@ -278,11 +280,11 @@ QVariant sensor::pair(QVariant pairdata){
     QVariantList triggers = map["triggers"].toList();
     foreach (QVariant trigger, triggers) {
         if(trigger.toMap()["eventname"].toString().compare("Above event") == 0)
-            triggersetup[0] = trigger.toMap()["actionenum"].toInt();
+            triggersetup[0] = static_cast<int8_t>(trigger.toMap()["actionenum"].toInt());
         if(trigger.toMap()["eventname"].toString().compare("Below event") == 0)
-            triggersetup[1] = trigger.toMap()["actionenum"].toInt();
+            triggersetup[1] = static_cast<int8_t>(trigger.toMap()["actionenum"].toInt());
         if(trigger.toMap()["eventname"].toString().compare("Change event") == 0)
-            triggersetup[2] = trigger.toMap()["actionenum"].toInt();
+            triggersetup[2] = static_cast<int8_t>(trigger.toMap()["actionenum"].toInt());
     }
 
     QByteArray pairurlstr = map["dsturi"].toString().toLatin1();
@@ -302,8 +304,8 @@ QVariant sensor::pair(QVariant pairdata){
     int pl = parent->getPrefixlen();
     if(parent->getAddress().isEqual(pairaddr)){ //If its the localhost, send ::1
         QByteArray pairaddrarr;
-        pairaddrarr.append((char)0);
-        pairaddrarr.append((char)1);
+        pairaddrarr.append(static_cast<char>(0));
+        pairaddrarr.append(static_cast<char>(1));
 
         cmp_write_array(&cmp, pairaddrarr.length());
         for(int i=0; i<pairaddrarr.length(); i +=2){
@@ -357,12 +359,12 @@ QVariant sensor::pair(QVariant pairdata){
     cmp_write_s8(&cmp, triggersetup[1]);    //Below action pointer
     cmp_write_s8(&cmp, triggersetup[2]);    //Change action pointer
 
-    payload.resize((uint8_t*)cmp.buf - (uint8_t*)payload.data());
+    payload.resize(static_cast<int>(static_cast<uint8_t*>(cmp.buf) - reinterpret_cast<uint8_t*>(payload.data())));
 
-    const char* uristring = uri.toLatin1().data();
+    char* uristring = uri.toLatin1().data();
     CoapPDU *pdu = new CoapPDU();
-    pdu->setURI((char*)uristring, strlen(uristring));
-    pdu->addURIQuery((char*)"join");
+    pdu->setURI(uristring, strlen(uristring));
+    pdu->addURIQuery("join");
 
     return put_request(pdu, req_pairsensor, payload);
 }
@@ -372,7 +374,7 @@ void sensor::testEvents(QVariant event, QVariant value){
     QVariantMap m = value.toMap();
     QByteArray payload;
     payload.reserve(100);
-    uint8_t eventval;
+    uint8_t eventval = 8;
     if(e.compare("aboveEvent") == 0){
         eventval = 2;
     }
@@ -384,16 +386,16 @@ void sensor::testEvents(QVariant event, QVariant value){
     }
 
     cmp_ctx_t cmp;
-    cmp_init(&cmp, payload.data(), 0, buf_writer);
+    cmp_init(&cmp, payload.data(), nullptr, buf_writer);
 
     cmp_write_u8(&cmp, eventval);
     cmp_write_u8(&cmp, 0);  //For now just send a zero as payload
-    payload.resize((uint8_t*)cmp.buf - (uint8_t*)payload.data());
+    payload.resize(static_cast<int>(static_cast<uint8_t*>(cmp.buf) - reinterpret_cast<uint8_t*>(payload.data())));
 
-    const char* uristring = uri.toLatin1().data();
+    char* uristring = uri.toLatin1().data();
     CoapPDU *pdu = new CoapPDU();
-    pdu->setURI((char*)uristring, strlen(uristring));
-    pdu->addURIQuery((char*)"postEvent");
+    pdu->setURI(uristring, strlen(uristring));
+    pdu->addURIQuery("postEvent");
 
     put_request(pdu, req_testevent, payload);
 }
@@ -419,19 +421,18 @@ void sensor::handleReturnCode(msgid token, CoapPDU::Code code){
 }
 
 void sensor::nodeNotResponding(msgid token){
-    qDebug() << "Message timed out";
+    qDebug() << "Token " << token.number << " timed out";
 }
 
 QVariant sensor::parseAppOctetFormat(msgid token, QByteArray payload, CoapPDU::Code code) {
     int cont = 0;
     cmp_ctx_t cmp;
-    cmp_init(&cmp, payload.data(), buf_reader, 0);
-    uint8_t id = 0;
+    cmp_init(&cmp, payload.data(), buf_reader, nullptr);
 
     do{
         cmp_object_t obj;
         if(!cmp_read_object(&cmp, &obj)) return QVariant(0);
-        QVariantMap result = cmpobjectToVariant(obj).toMap();
+        QVariantMap result = cmpobjectToVariant(obj, &cmp).toMap();
 
             switch(token.req){
             case req_RangeMinValue:
@@ -522,7 +523,7 @@ QVariant sensor::parseAppOctetFormat(msgid token, QByteArray payload, CoapPDU::C
     return QVariant(0);
 }
 
-pulsecounter::pulsecounter(node *parent, QString uri, QVariantMap attributes, sensorstore *p) : sensor(parent, uri, attributes){
+pulsecounter::pulsecounter(node *parent, QString uri, QVariantMap attributes) : sensor(parent, uri, attributes){
 
 }
 
@@ -530,7 +531,7 @@ pulsecounter::pulsecounter(node *parent, QString uri, QVariantMap attributes, se
 
 QVariant cmpobjectToVariant(cmp_object_t obj, cmp_ctx_t* cmp){
     QVariantMap result;
-    uint32_t size = 200;
+    int32_t size = 200;
     QByteArray str;
     QVariantList arr;
     result["enum_no"] = obj.type;
@@ -609,13 +610,18 @@ QVariant cmpobjectToVariant(cmp_object_t obj, cmp_ctx_t* cmp){
     case CMP_TYPE_FIXSTR:
         result["enum_str"] = "CMP_TYPE_FIXSTR";
         str.reserve(size);
-        cmp->buf = cmp->buf - 1; //To read the string, we need to start at the size marker
-        if(!cmp_read_str(cmp, str.data(), &size)) return QVariant(0);
+        cmp->buf = static_cast<uint8_t*>(cmp->buf) - 1; //To read the string, we need to start at the size marker
+        if(!cmp_read_str(cmp, str.data(), reinterpret_cast<uint32_t*>(&size))) return QVariant(0);
         str.resize(size);
         result["value"] = QString::fromLatin1(str.data());
         break;
     case CMP_TYPE_BIN8:
         result["enum_str"] = "CMP_TYPE_BIN8";
+        str.reserve(size);
+        cmp->buf = static_cast<uint8_t*>(cmp->buf) - 2;
+        if(!cmp_read_bin(cmp, str.data(), reinterpret_cast<uint32_t*>(&size))) return QVariant(0);
+        str.resize(size);
+        result["value"] = str;
         break;
     case CMP_TYPE_BIN16:
         result["enum_str"] = "CMP_TYPE_BIN16";
@@ -681,7 +687,7 @@ cmp_object_t QVariantToCmpobject(uint8_t type, QVariant value){
     case CMP_TYPE_POSITIVE_FIXNUM:
     case CMP_TYPE_NIL:
     case CMP_TYPE_UINT8:
-        obj.as.u8 = value.toUInt();
+        obj.as.u8 = static_cast<uint8_t>(value.toUInt());
         break;
     case CMP_TYPE_BOOLEAN:
         obj.as.boolean = value.toBool();
@@ -693,7 +699,7 @@ cmp_object_t QVariantToCmpobject(uint8_t type, QVariant value){
         obj.as.dbl = value.toDouble();
         break;
     case CMP_TYPE_UINT16:
-        obj.as.u16 = value.toUInt();
+        obj.as.u16 = static_cast<uint16_t>(value.toUInt());
         break;
     case CMP_TYPE_UINT32:
         obj.as.u32 = value.toUInt();
@@ -703,10 +709,10 @@ cmp_object_t QVariantToCmpobject(uint8_t type, QVariant value){
         break;
     case CMP_TYPE_SINT8:
     case CMP_TYPE_NEGATIVE_FIXNUM:
-        obj.as.s8 = value.toInt();
+        obj.as.s8 = static_cast<int8_t>(value.toInt());
         break;
     case CMP_TYPE_SINT16:
-        obj.as.s16 = value.toInt();
+        obj.as.s16 = static_cast<int16_t>(value.toInt());
         break;
     case CMP_TYPE_SINT32:
         obj.as.s32 = value.toInt();
@@ -744,18 +750,18 @@ cmp_object_t QVariantToCmpobject(uint8_t type, QVariant value){
 /* Returns the len of the encoded message */
 int encode(char* buffer, cmp_object_t objTemplate, QVariant value){
     cmp_ctx_t cmp;
-    cmp_init(&cmp, buffer, 0, buf_writer);
+    cmp_init(&cmp, buffer, nullptr, buf_writer);
 
     cmp_object_t obj = QVariantToCmpobject(objTemplate.type, value);
 
     cmp_write_object(&cmp, &obj);
-    return (char*)cmp.buf - buffer;
+    return static_cast<int>(static_cast<char*>(cmp.buf) - buffer);
 }
 
 bool buf_reader(cmp_ctx_t *ctx, void *data, uint32_t limit) {
 
-    uint8_t* dataptr = (uint8_t*)data;
-    uint8_t* bufptr = (uint8_t*)ctx->buf;
+    uint8_t* dataptr = static_cast<uint8_t*>(data);
+    uint8_t* bufptr = static_cast<uint8_t*>(ctx->buf);
 
     for(uint32_t i=0; i<limit; i++){
         *dataptr++ = *bufptr++;
@@ -769,8 +775,8 @@ bool buf_reader(cmp_ctx_t *ctx, void *data, uint32_t limit) {
 
 static uint32_t buf_writer(cmp_ctx_t* ctx, const void *data, uint32_t count){
 
-    uint8_t* dataptr = (uint8_t*)data;
-    uint8_t* bufptr = (uint8_t*)ctx->buf;
+    uint8_t* dataptr = (uint8_t*)(data);
+    uint8_t* bufptr = static_cast<uint8_t*>(ctx->buf);
 
     for(uint32_t i=0; i<count; i++){
         *bufptr++ = *dataptr++;

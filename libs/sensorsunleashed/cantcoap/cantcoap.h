@@ -151,9 +151,9 @@ class CoapPDU {
 		int getNumOptions();
 		// shorthand helpers
 		int setURI(char *uri);
-		int setURI(char *uri, int urilen);
+        int setURI(char *uri, size_t urilen);
 		int getURI(char *dst, int dstlen, int *outLen);
-		int addURIQuery(char *query);
+        int addURIQuery(const char *query);
 
 		// content format helper
 		int setContentFormat(CoapPDU::ContentFormat format);

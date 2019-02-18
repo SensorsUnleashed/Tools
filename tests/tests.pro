@@ -2,5 +2,8 @@ TEMPLATE = subdirs
 
 SUBDIRS += \
     OTAUpgradeGui \
-    observe
+    observe \
+    UartCoap \
+    WoodyLog \
+    test
 

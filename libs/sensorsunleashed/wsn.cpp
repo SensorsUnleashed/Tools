@@ -31,7 +31,7 @@ void wsn::send(CoapPDU *pdu, msgid cmdref, QByteArray payload, quint8 allow_retr
             tx_progress(storedPDU->num, payload.length());
         }
         else{   //Normal single message payload
-            pdu->setPayload((uint8_t*)payload.data(), payload.length());
+            pdu->setPayload(reinterpret_cast<uint8_t*>(payload.data()), payload.length());
         }
     }
 
@@ -275,7 +275,7 @@ CoapPDU::CoapOption* wsn::coap_check_option(CoapPDU *pdu, enum CoapPDU::Option o
             return options+i;
         }
     }
-    return 0;
+    return nullptr;
 }
 
 struct coapMessageStore_* wsn::findPDU(CoapPDU* pdu){
@@ -285,7 +285,7 @@ struct coapMessageStore_* wsn::findPDU(CoapPDU* pdu){
     for(int i=0; i<activePDUs.count(); i++){
         if(activePDUs[i]->token == token) return activePDUs[i];
     }
-    return 0;
+    return nullptr;
 }
 
 void wsn::send_RST(CoapPDU *recvPDU){
@@ -320,10 +320,11 @@ void wsn::send_ACK(CoapPDU *recvPDU){
 
 void wsn::parseData(QByteArray datagram){
     //processTheDatagram(datagram);
-    CoapPDU *recvPDU = new CoapPDU((uint8_t*)datagram.data(),datagram.length());
+    CoapPDU *recvPDU = new CoapPDU(reinterpret_cast<uint8_t*>(datagram.data()),datagram.length());
     CoapPDU *txPDU; //Assign this pdu to the next pdu to send, and switch out with the one in the store
-    CoapPDU::CoapOption* options = 0;
+    CoapPDU::CoapOption* options = nullptr;
     int dotx = 0;
+    int wait = 0;
     int handled = 0;
 
     if(recvPDU->validate()) {
@@ -339,7 +340,7 @@ void wsn::parseData(QByteArray datagram){
 //        }
 
         //We expected this message - handle it
-        if(storedPDUdata != 0){
+        if(storedPDUdata != nullptr){
 
             CoapPDU::Type type = recvPDU->getType();
             if(type == CoapPDU::COAP_CONFIRMABLE){
@@ -354,7 +355,7 @@ void wsn::parseData(QByteArray datagram){
 
             /* Handle block1 - response from a put/post (Send more money) */
             options = coap_check_option(recvPDU, CoapPDU::COAP_OPTION_BLOCK1);
-            if(options != 0){
+            if(options != nullptr){
                 handled = 1;
                 uint8_t more;
                 uint32_t num;
@@ -411,7 +412,7 @@ void wsn::parseData(QByteArray datagram){
 
             //Handle block2 - response to a get
             options = coap_check_option(recvPDU, CoapPDU::COAP_OPTION_BLOCK2);
-            if(options != 0){
+            if(options != nullptr){
                 handled = 1;
                 uint8_t more;
                 uint32_t num;
@@ -449,19 +450,13 @@ void wsn::parseData(QByteArray datagram){
                 }
             }   //Block2 handling
 
-//            options = coap_check_option(recvPDU, CoapPDU::COAP_OPTION_OBSERVE);
-//            if(options != 0){
-
-//                if(code == CoapPDU::COAP_CONTENT){
-//                    qDebug() << "Coap observe enabled";
-//                }
-//                else
-//                    qDebug() << "Coap observe failed";
-//            }
-
             //Its just a regular piggibacked ack
             if(!handled){
-                if(recvPDU->getPayloadLength()){
+                if(code == CoapPDU::COAP_EMPTY){
+                    //This means the server knows about us, but is not ready to provide us with what we want. Wait for it
+                    wait = 1;
+                }
+                else if(recvPDU->getPayloadLength()){
                     uint8_t* pl = recvPDU->getPayloadPointer();
                     for(int i=0; i<recvPDU->getPayloadLength(); i++){
                         storedPDUdata->rx_payload[i] = *(pl+i);
@@ -501,6 +496,11 @@ void wsn::parseData(QByteArray datagram){
                 socket* conn = socket::getInstance();
                 conn->send(addr, txPDU->getPDUPointer(), txPDU->getPDULength());
             }
+            else if(wait){
+                //Reset timeout
+                storedPDUdata->retranscount = 0;
+                storedPDUdata->txtime.restart();
+            }
             else{
                 removePDU(storedPDUdata->token);
             }
@@ -518,7 +518,7 @@ void wsn::parseData(QByteArray datagram){
 QVariant wsn::parseMessage(coapMessageStore_* message, CoapPDU::Code code){
     QVariant ret(0);
     int ct = 0;
-    CoapPDU::CoapOption* options = 0;
+    CoapPDU::CoapOption* options = nullptr;
     options = coap_check_option(message->lastPDU, CoapPDU::COAP_OPTION_CONTENT_FORMAT);
     if(options){
         if(options->optionValueLength > 0){

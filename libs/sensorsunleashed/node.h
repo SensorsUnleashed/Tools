@@ -80,7 +80,7 @@ public:
     void requestRangeMin();
     void requestRangeMax();
 
-    void requestValue();
+    void requestValue(char* query = nullptr);
 
     QVariant requestObserve(QString event);
     void abortObserve(QVariant token);
@@ -167,7 +167,7 @@ class SENSORSUNLEASHEDSHARED_EXPORT defaultdevice : public sensor {
     Q_OBJECT
 
 public:
-    defaultdevice(node *parent, QString uri, QVariantMap attributes, sensorstore *p=nullptr) : sensor(parent, uri, attributes){
+    defaultdevice(node *parent, QString uri, QVariantMap attributes) : sensor(parent, uri, attributes){
 
     }
 
@@ -182,7 +182,7 @@ class SENSORSUNLEASHEDSHARED_EXPORT pulsecounter : public sensor {
     Q_OBJECT
 
 public:
-    pulsecounter(node *parent, QString uri, QVariantMap attributes, sensorstore *p=nullptr);
+    pulsecounter(node *parent, QString uri, QVariantMap attributes);
 
     QVariant getClassType(){ return "DefaultDevice.qml"; }
     int8_t getValueType(){ return CMP_TYPE_UINT16; }

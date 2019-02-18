@@ -440,7 +440,7 @@ int CoapPDU::setURI(char *uri) {
  *
  * \return 1 on success, 0 on failure.
  */
-int CoapPDU::setURI(char *uri, int urilen) {
+int CoapPDU::setURI(char *uri, size_t urilen) {
 	// only '/', '?', '&' and ascii chars allowed
 
 	// sanitation
@@ -529,7 +529,7 @@ int CoapPDU::setURI(char *uri, int urilen) {
  * \param query The uri query to encode.
  * \return 0 on success, 1 on failure.
  */
-int CoapPDU::addURIQuery(char *query) {
+int CoapPDU::addURIQuery(const char *query) {
 	return addOption(COAP_OPTION_URI_QUERY,strlen(query),(uint8_t*)query);
 }
 

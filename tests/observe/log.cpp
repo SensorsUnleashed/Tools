@@ -22,20 +22,25 @@ int sensorlog::prepareTables(int8_t datatype){
 
     QSqlQuery qry;
 
-    QString dt;
+    QString dt, ts;
     if(datatype >= CMP_TYPE_UINT8 && datatype <= CMP_TYPE_SINT64){
+#if USE_SQLITE
         dt = "INTEGER";
+        ts = "INTEGER";
+#else
+        dt = "INT";
+        ts = "BIGINT";
+#endif
     }
 
     QString querystring = "CREATE TABLE IF NOT EXISTS " + tablename +
-            "(Timestamp INTEGER, "
+            "(Timestamp " + ts + ", "
             "Value " + dt + ", "
             "Min " + dt + ", "
             "Max " + dt + ", "
              "Logid INTEGER); "
             ;
 
-    // Creating table owner
     qry.prepare(querystring);
 
     if( !qry.exec() ){

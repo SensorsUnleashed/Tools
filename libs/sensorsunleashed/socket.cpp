@@ -1,7 +1,7 @@
 #include "wsn.h"
 
 bool socket::instanceFlag = false;
-socket* socket::conn = NULL;
+socket* socket::conn = nullptr;
 
 socket::socket(QObject *parent) : QObject(parent)
 {
@@ -57,14 +57,14 @@ void socket::observe_stop(wsn* ref){
 }
 
 void socket::send(QHostAddress addr, uint8_t* pduptr, int len){
-    udpSocket->writeDatagram((char*)pduptr, len, addr, 5683);
+    udpSocket->writeDatagram(reinterpret_cast<char*>(pduptr), len, addr, 5683);
 }
 
 void socket::readPendingDatagrams(){
     while (udpSocket->hasPendingDatagrams()) {
         //Create the bytearray and have the one using it handle it.
         QByteArray datagram;
-        datagram.resize(udpSocket->pendingDatagramSize());
+        datagram.resize(static_cast<int>(udpSocket->pendingDatagramSize()));
         QHostAddress sender;
         quint16 senderPort;
 

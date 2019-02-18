@@ -200,7 +200,6 @@ QVariant node::request_swreset(){
 #include <QFile>
 #include <QUrl>
 QVariant node::swupgrade(QString filename){
-    quint16 token;
     qDebug() << "Upgrade using " << filename;
 
     QByteArray binary;
