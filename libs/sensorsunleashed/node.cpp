@@ -30,10 +30,14 @@
  * This file is part of the Sensors Unleashed project
  *******************************************************************************/
 #include "node.h"
+#include "coap_transaction.h"
+#include <QRandomGenerator>
+
 //Created from QML
-node::node(QHostAddress addr) : suinterface(addr)
+node::node(QHostAddress addr, quint16 port) : suinterface(addr, port)
 {
     ip = addr;
+    this->port = port;
     prefix_len = 64; //This should be taken from somewhere in the database
     uri = "su/nodeinfo";
     m_commStatus = UNKNOWN;
@@ -42,91 +46,92 @@ node::node(QHostAddress addr) : suinterface(addr)
 
 /* Request the list of sensors from the node */
 void node::requestLinks(){
+    quint32 t = QRandomGenerator::global()->generate();
 
-    msgid t;
-    token = qrand();
-    t.number = token;
+    QByteArray token;
+
+    token.append(static_cast<char>(t));
+    token.append(static_cast<char>(t >> 8));
+    token.append(static_cast<char>(t >> 16));
+    token.append(static_cast<char>(t >> 24));
 
     const char* uristring = ".well-known/core";
 
     CoapPDU *pdu = new CoapPDU();
     pdu->setType(CoapPDU::COAP_CONFIRMABLE);
     pdu->setCode(CoapPDU::COAP_GET);
-    pdu->setToken((uint8_t*)&token,2);
+    pdu->setToken(reinterpret_cast<uint8_t*>(token.data()), static_cast<uint8_t>(token.length()));
 
     enum CoapPDU::ContentFormat ct = CoapPDU::COAP_CONTENT_FORMAT_APP_LINK;
     pdu->addOption(CoapPDU::COAP_OPTION_CONTENT_FORMAT,1,(uint8_t*)&ct);
-    pdu->setMessageID(token);
-    pdu->setURI((char*)uristring, strlen(uristring));
+    pdu->setMessageID(1);
+    pdu->setURI(const_cast<char*>(uristring), strlen(uristring));
 
-    send(pdu, t);
+    new coap_transaction(ip, port, pdu, this, nullptr);
 }
 
 /* Parse the list of published sensors from this node */
-QVariant node::parseAppLinkFormat(msgid token, QByteArray payload){
+QVariant node::parseAppLinkFormat(QByteArray token, QByteArray payload){
     Q_UNUSED(token);
+    coreLinks = payload;
     qDebug() << "node: parseAppLinkFormat";
+
 
     QString pl = QString(payload);
     //All resources are separeted by a ','
     QStringList rlist = pl.split(',', QString::SkipEmptyParts);
     for(int i=0; i<rlist.count(); i++){
-        QStringList slist = rlist.at(i).split(';', QString::SkipEmptyParts);
-        QString uri;
-        QVariantMap attributes;
-
-        for(int j=0; j<slist.count(); j++){
-            if(j==0){   //Uri
-                //For now index 0 is always the uri
-                uri = slist.at(0);
-                uri.remove(QRegExp("[<>]"));
-                if( uri.at(0) == '/' ) uri.remove( 0, 1 );    //Remove leading "/"
-                //slist.removeAt(0);
-            }
-            else{   //Attributes as key value pairs
-                QStringList keyval = slist.at(j).split("=");
-                if(keyval.size() == 2){
-                    attributes[keyval[0]] = keyval[1];
-                }
-            }
-        }
-        //addSensor(uri, attributes);
+        coap_resource* r = new coap_resource(rlist.at(i));
+        addSensor(r);
     }
     this->token = 0;
     return QVariant(0);
 }
 
-//void node::addSensor(QString uri, QVariantMap attributes){
-//    if(uri.compare("su/nodeinfo") == 0){
-//        //This is a special device, we use to handle special commands, like
-//        //Format the filesystem, factory reset, hw/sw version request. etc
-//        //Its always there, so we have already created this device during node
-//        //creation
-//    }
-//    else if(uri.compare(".well-known/core") != 0){
-//        sensor* s;
-//        if(uri.compare("su/pulsecounter") == 0){
-//            s = new pulsecounter(this, uri, attributes, allsensorslist);
-//        }
-//        else if(uri.compare("su/timer") == 0){
-//            s = new timerdevice(this, uri, attributes, allsensorslist);
-//        }
-//        else if(
-//                uri.compare("su/powerrelay") == 0 ||
-//                uri.compare("su/ledindicator") == 0 ||
-//                uri.compare("su/led_yellow") == 0 ||
-//                uri.compare("su/led_red") == 0 ||
-//                uri.compare("su/led_orange") == 0 ||
-//                uri.compare("su/led_green") == 0
-//                ){
-//            s = new defaultdevice(this, uri, attributes, allsensorslist);
-//        }
-//        else{
-//            s = new sensor(this, uri, attributes, allsensorslist);
-//        }
-//        emit sensorFound(uri, s->getClassType());
-//    }
-//}
+void node::addSensor(coap_resource* resource){
+
+    QString uri = resource->getUri();
+
+    if(uri.compare("su/nodeinfo") == 0){
+        //This is a special device, we use to handle special commands, like
+        //Format the filesystem, factory reset, hw/sw version request. etc
+        //Its always there, so we have already created this device during node
+        //creation
+    }
+    else if(uri.compare(".well-known/core") != 0){
+
+        for(int i=0; i<sensors.count(); i++){
+            if(sensors[i]->getUri().compare(uri) == 0){
+                return;
+            }
+        }
+
+        sensor* s;
+        if(uri.compare("su/pulsecounter") == 0){
+            s = new pulsecounter(this, resource);
+        }
+        else if(uri.compare("su/timer") == 0){
+            s = new timerdevice(this, resource);
+        }
+        else if(
+                uri.compare("su/powerrelay") == 0 ||
+                uri.compare("su/ledindicator") == 0 ||
+                uri.compare("su/led_yellow") == 0 ||
+                uri.compare("su/led_red") == 0 ||
+                uri.compare("su/led_orange") == 0 ||
+                uri.compare("su/led_green") == 0
+                ){
+            s = new defaultdevice(this, resource);
+        }
+        else{
+            s = new sensor(this, resource);
+        }
+
+        sensors.append(s);
+
+        emit sensorFound(uri, s->getClassType());
+    }
+}
 
 QVariant node::request_cfs_format(){
     const char* uristring = uri.toLatin1().data();
@@ -252,7 +257,7 @@ void node::nodeResponding(msgid token){
 }
 
 
-QVariant node::parseAppOctetFormat(msgid token, QByteArray payload, CoapPDU::Code code) {
+QVariant node::parseAppOctetFormat(QByteArray token, QByteArray payload, CoapPDU::Code code) {
     Q_UNUSED(code);
     qDebug() << uri << " got message!";
     cmp_object_t obj;
@@ -268,7 +273,9 @@ QVariant node::parseAppOctetFormat(msgid token, QByteArray payload, CoapPDU::Cod
         res.append(result);
     }
 
-    switch(token.req){
+    int req = getTokenref(token);
+
+    switch(req){
     case req_versions:
         emit requst_received("req_versions", res);
         break;

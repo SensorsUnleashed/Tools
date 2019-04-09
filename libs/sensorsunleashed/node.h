@@ -40,6 +40,7 @@
 #include "cmp_helpers.h"
 #include "wsn.h"
 #include <QDateTime>
+#include <coap_resource.h>
 
 class pairlist;
 class sensorstore;
@@ -49,31 +50,51 @@ int findToken(uint16_t token, QVector<msgid> tokenlist);
 QVariant cmpobjectToVariant(cmp_object_t obj, cmp_ctx_t *cmp = nullptr);
 bool buf_reader(cmp_ctx_t *ctx, void *data, uint32_t limit);
 
-class SENSORSUNLEASHEDSHARED_EXPORT suinterface : public wsn
+class SENSORSUNLEASHEDSHARED_EXPORT suinterface : public QObject
 {
     Q_OBJECT
 public:
-    suinterface(QHostAddress addr);
+    suinterface(QHostAddress addr, quint16 port);
 
-protected:
-    quint16 get_request(CoapPDU *pdu, enum request req, QByteArray payload=nullptr, quint8 allow_retry=0);
-    quint16 put_request(CoapPDU *pdu, enum request req, QByteArray payload=nullptr, quint8 allow_retry=0);
+    QByteArray request(CoapPDU *pdu, int req, QByteArray payload = nullptr);
+
+    void parseMessage(QByteArray token, QByteArray message, CoapPDU::Code code, enum CoapPDU::ContentFormat ct);
 
 private:
+    QHostAddress addr;
+    quint16 port;
 
+protected:
+    QByteArray get_request(CoapPDU *pdu, int req, QByteArray payload=nullptr, quint8 allow_retry=0);
+    QByteArray put_request(CoapPDU *pdu, int req, QByteArray payload=nullptr, quint8 allow_retry=0);
+
+
+
+    int getTokenref(QByteArray token);
+    void setTokenref(QByteArray token, int ref);
+
+    virtual QVariant parseTextPlainFormat(QByteArray token, QByteArray payload){ qDebug() << "wsn::parseTextPlainFormat " << payload << " token=" << token; return QVariant(0);}
+    virtual QVariant parseAppLinkFormat(QByteArray token, QByteArray payload) { Q_UNUSED(payload); Q_UNUSED(token); qDebug() << "wsn::parseAppLinkFormat Implement this"; return QVariant(0);}
+    virtual QVariant parseAppXmlFormat(QByteArray token, QByteArray payload) { Q_UNUSED(payload); Q_UNUSED(token); qDebug() << "wsn::parseAppXmlFormat Implement this"; return QVariant(0);}
+    virtual QVariant parseAppOctetFormat(QByteArray token, QByteArray payload, CoapPDU::Code code) { Q_UNUSED(payload); Q_UNUSED(token); Q_UNUSED(code); qDebug() << "wsn::parseAppOctetFormat Implement this"; return QVariant(0);}
+    virtual QVariant parseAppExiFormat(QByteArray token, QByteArray payload) { Q_UNUSED(payload); Q_UNUSED(token); qDebug() << "wsn::parseAppExiFormat Implement this"; return QVariant(0);}
+    virtual QVariant parseAppJSonFormat(QByteArray token, QByteArray payload) { Q_UNUSED(payload); Q_UNUSED(token); qDebug() << "wsn::parseAppJSonFormat Implement this"; return QVariant(0);}
+
+private:
+    QHash<QByteArray, int> tokenref;
 };
 
 class SENSORSUNLEASHEDSHARED_EXPORT sensor : public suinterface
 {
     Q_OBJECT
 public:
-    sensor(node* parent, QString uri, QVariantMap attributes);
+    sensor(node* parent, coap_resource* resource);
 
     //Dummy constructor
     sensor(QString ipaddr, QString uri);
 
     node* getParent(){ return parent;}
-    QString getUri(){ return uri; }
+    QString getUri(){ return resource->getUri(); }
     QString getAddressStr() {return ip.toString(); }
 
     void initSensor();
@@ -96,14 +117,14 @@ public:
     /* Pair this sensor with another. */
     void getpairingslist();
     QVariant clearpairingslist();
-    uint16_t removeItems(QByteArray arr);
+    QByteArray removeItems(QByteArray arr);
     QVariant pair(QVariant pairdata);
 
     void testEvents(QVariant event, QVariant value);
 
     void handleReturnCode(msgid token, CoapPDU::Code code);
     void nodeNotResponding(msgid token);
-    QVariant parseAppOctetFormat(msgid token, QByteArray payload, CoapPDU::Code code);
+    QVariant parseAppOctetFormat(QByteArray token, QByteArray payload, CoapPDU::Code code);
 
     virtual QVariant getClassType(){ return "DefaultSensor.qml"; }
     virtual QVariant getActionModel() { return "DefaultActions.qml"; }
@@ -116,7 +137,7 @@ public:
     cmp_object_t getMinLimit(){ return RangeMin; }
 
 protected:
-    QString uri;
+
     //uint16_t put_request(CoapPDU *pdu, enum request req, QByteArray payload);
 
     cmp_object_t eventsActive;		//All events on or Off
@@ -134,13 +155,13 @@ private:
     pairlist* pairings;
     QHostAddress ip;
     uint8_t init;   //Flag to indicate if sensor config has been requested or not
-
+    coap_resource* resource;
     //uint16_t get_request(CoapPDU *pdu, enum request req, QByteArray payload=0);
 
 signals:
-    void currentValueChanged(quint16 token, QVariant result);
-    void observe_started(QVariant result, uint16_t token);
-    void observe_failed(uint16_t token);
+    void currentValueChanged(QByteArray token, QVariant result);
+    void observe_started(QVariant result, QByteArray token);
+    void observe_failed(QByteArray token);
     void aboveEventValueChanged(QVariant result);
     void belowEventValueChanged(QVariant result);
     void changeEventValueChanged(QVariant result);
@@ -154,7 +175,10 @@ signals:
 class SENSORSUNLEASHEDSHARED_EXPORT timerdevice : public sensor {
     Q_OBJECT
 public:
-    timerdevice(node* parent, QString uri, QVariantMap attributes, sensorstore *p);
+    timerdevice(node* parent, coap_resource* resource) : sensor(parent, resource){
+
+    }
+
     QVariant getClassType(){ return "TimerDevice.qml"; }
 
 private:
@@ -167,7 +191,7 @@ class SENSORSUNLEASHEDSHARED_EXPORT defaultdevice : public sensor {
     Q_OBJECT
 
 public:
-    defaultdevice(node *parent, QString uri, QVariantMap attributes) : sensor(parent, uri, attributes){
+    defaultdevice(node *parent, coap_resource* resource) : sensor(parent, resource){
 
     }
 
@@ -182,7 +206,7 @@ class SENSORSUNLEASHEDSHARED_EXPORT pulsecounter : public sensor {
     Q_OBJECT
 
 public:
-    pulsecounter(node *parent, QString uri, QVariantMap attributes);
+    pulsecounter(node *parent, coap_resource* resource);
 
     QVariant getClassType(){ return "DefaultDevice.qml"; }
     int8_t getValueType(){ return CMP_TYPE_UINT16; }
@@ -200,10 +224,11 @@ class SENSORSUNLEASHEDSHARED_EXPORT node : public suinterface
     Q_OBJECT
     Q_PROPERTY(commStatus commStatus READ getCommStatus NOTIFY commStatusChanged)
 public:
-    node(QHostAddress addr);
+    node(QHostAddress addr, quint16 port = 5683);
 
     QVariant getDatabaseinfo(){ return databaseinfo; }
     QHostAddress getAddress() { return ip; }
+    quint16 getPort() { return port; }
     Q_INVOKABLE QString getAddressStr() {return ip.toString(); }
     void requestLinks();
 
@@ -213,8 +238,8 @@ public:
     QDateTime getLastSeenTime() { return lastSeen; }
 
     /* Virtual functions (wsn)*/
-    QVariant parseAppLinkFormat(msgid token, QByteArray payload);
-    QVariant parseAppOctetFormat(msgid token, QByteArray payload);
+    QVariant parseAppLinkFormat(QByteArray token, QByteArray payload);
+    QVariant parseAppOctetFormat(QByteArray token, QByteArray payload);
 
     uint8_t getPrefixlen(){ return prefix_len; }
 
@@ -231,7 +256,7 @@ public:
     void nodeNotResponding(msgid token);
     void nodeResponding(msgid token);
 
-    QVariant parseAppOctetFormat(msgid token, QByteArray payload, CoapPDU::Code code);
+    QVariant parseAppOctetFormat(QByteArray token, QByteArray payload, CoapPDU::Code code);
 
     enum commStatus { OK, NOTOK, UNKNOWN };
     Q_ENUMS(commStatus)
@@ -249,6 +274,7 @@ protected:
 private:
     QString name;
     QHostAddress ip;
+    quint16 port;
     QVariantMap linklist;
     uint16_t token;
     QDateTime lastSeen;
@@ -256,6 +282,10 @@ private:
     QVector<sensor*> sensors;
 
     uint8_t prefix_len;
+
+    QByteArray coreLinks;
+
+    void addSensor(coap_resource* resource);
 
 signals:
     void sensorFound(QVariant sensorinfo, QVariant source);

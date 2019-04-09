@@ -59,12 +59,17 @@ suapp::suapp()
 
 
     node* n1 = new node(QHostAddress("fd00::212:4b00:3d0:a448"));
-    pulsecounter* s1 = new pulsecounter(n1, "su/pulsecounter", QVariantMap());
+
+    coap_resource* r1 = new coap_resource();
+    r1->setUri("su/pulsecounter");
+    pulsecounter* s1 = new pulsecounter(n1, r1);
     sensorlog* l1 = new sensorlog(s1, "pulsecounter", "change", logid);
 
     node* n2 = new node(QHostAddress("fd00::212:4b00:5af:82b7"));
+    coap_resource* r2 = new coap_resource();
+    r2->setUri("su/powerrelay");
     //defaultdevice* s2 = new defaultdevice(n2, "su/powerrelay", QVariantMap());
-    sensor* s2 = new sensor(n2, "su/powerrelay", QVariantMap());
+    sensor* s2 = new sensor(n2, r2);
     sensorlog* l2 = new sensorlog(s2, "powerrelay", "change", logid);
 
     senserlogmap.insert(s1, l1);

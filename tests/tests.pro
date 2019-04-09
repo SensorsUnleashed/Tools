@@ -5,5 +5,7 @@ SUBDIRS += \
     observe \
     UartCoap \
     WoodyLog \
-    test
+    test \
+    resourceDirectory \
+    CoAPCmdline
 

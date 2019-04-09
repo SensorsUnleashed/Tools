@@ -35,11 +35,12 @@
 int encode(char* buffer, cmp_object_t objTemplate, QVariant value);
 static uint32_t buf_writer(cmp_ctx_t* ctx, const void *data, uint32_t count);
 
-sensor::sensor(node* parent, QString uri, QVariantMap attributes) : suinterface(parent->getAddress())
+sensor::sensor(node* parent, coap_resource *resource) : suinterface(parent->getAddress(), parent->getPort())
 {
-    qDebug() << "Sensor: " << uri << " with attribute: " << attributes << " created";
+    qDebug() << "Sensor: " << resource->getUri() << " with attribute: " << resource->getAttributes() << " created";
     this->parent = parent;
-    this->uri = uri;
+    this->resource = resource;
+
     ip = parent->getAddress();
     eventsActive.as.u8 = 0;
     eventsActive.type = CMP_TYPE_UINT8;
@@ -60,9 +61,11 @@ sensor::sensor(node* parent, QString uri, QVariantMap attributes) : suinterface(
 }
 
 /* We create a dummy sensor, used only if a pairing could not be resolved */
-sensor::sensor(QString ipaddr, QString uri): suinterface(QHostAddress(ipaddr)){
+sensor::sensor(QString ipaddr, QString uri): suinterface(QHostAddress(ipaddr), 0){
     ip = QHostAddress(ipaddr);
-    this->uri = uri;
+
+    resource = new coap_resource();
+    resource->setUri(uri.toLatin1().data());
     parent = nullptr;
     init = 1;
 }
@@ -106,9 +109,9 @@ QVariant sensor::getConfigValues(){
 }
 
 void sensor::requestValue(char *query){
-    char* uristring = uri.toLatin1().data();
+    QByteArray uristring = resource->getUri();
     CoapPDU *pdu = new CoapPDU();
-    pdu->setURI(uristring, strlen(uristring));
+    pdu->setURI(uristring.data(), static_cast<size_t>(uristring.length()));
     if(query){
         pdu->addURIQuery(query);
     }
@@ -118,17 +121,13 @@ void sensor::requestValue(char *query){
 QVariant sensor::requestObserve(QString event){
     uint8_t id = 0;
 
-    QString str = uri + "/" + event;
+    QString str = resource->getUri() + "/" + event;
     QByteArray arr = QByteArray(str.toLatin1().data(), str.length());
 
     char* uristring = arr.data();
     CoapPDU *pdu = new CoapPDU();
     pdu->setURI(uristring, strlen(uristring));
     pdu->addOption(CoapPDU::COAP_OPTION_OBSERVE, 1, &id);
-
-    char dst[100];
-    int len;
-    pdu->getURI(&dst[0], 100, &len);
 
     return get_request(pdu, req_observe);
 }
@@ -138,53 +137,54 @@ void sensor::abortObserve(QVariant token){
         Removing a token, will render the next
         pdu as unknown and retransmit a RST command
     */
-    enableTokenRemoval(token.toUInt());
+    //enableTokenRemoval(token.toUInt());
 }
 
 void sensor::requestAboveEventLvl(){   
-    char* uristring = uri.toLatin1().data();
+
+    QByteArray uristring = resource->getUri();
     CoapPDU *pdu = new CoapPDU();
-    pdu->setURI(uristring, strlen(uristring));
+    pdu->setURI(uristring.data(), static_cast<size_t>(uristring.length()));
     pdu->addURIQuery("AboveEventAt");
     get_request(pdu, req_aboveEventValue);
 }
 
 void sensor::requestBelowEventLvl(){   
-    char* uristring = uri.toLatin1().data();
+    QByteArray uristring = resource->getUri();
     CoapPDU *pdu = new CoapPDU();
-    pdu->setURI(uristring, strlen(uristring));
+    pdu->setURI(uristring.data(), static_cast<size_t>(uristring.length()));
     pdu->addURIQuery("BelowEventAt");
     get_request(pdu, req_belowEventValue);
 }
 
 void sensor::requestChangeEventLvl(){   
-    char* uristring = uri.toLatin1().data();
+    QByteArray uristring = resource->getUri();
     CoapPDU *pdu = new CoapPDU();
-    pdu->setURI(uristring, strlen(uristring));
+    pdu->setURI(uristring.data(), static_cast<size_t>(uristring.length()));
     pdu->addURIQuery("ChangeEventAt");
     get_request(pdu, req_changeEventAt);
 }
 
 void sensor::requestRangeMin(){
-    char* uristring = uri.toLatin1().data();
+    QByteArray uristring = resource->getUri();
     CoapPDU *pdu = new CoapPDU();
-    pdu->setURI(uristring, strlen(uristring));
+    pdu->setURI(uristring.data(), static_cast<size_t>(uristring.length()));
     pdu->addURIQuery("RangeMin");
     get_request(pdu, req_RangeMinValue);
 }
 
 void sensor::requestRangeMax(){
-    char* uristring = uri.toLatin1().data();
+    QByteArray uristring = resource->getUri();
     CoapPDU *pdu = new CoapPDU();
-    pdu->setURI(uristring, strlen(uristring));
+    pdu->setURI(uristring.data(), static_cast<size_t>(uristring.length()));
     pdu->addURIQuery("RangeMax");
     get_request(pdu, req_RangeMaxValue);
 }
 
 void sensor::req_eventSetup(){
-    char* uristring = uri.toLatin1().data();
+    QByteArray uristring = resource->getUri();
     CoapPDU *pdu = new CoapPDU();
-    pdu->setURI(uristring, strlen(uristring));
+    pdu->setURI(uristring.data(), static_cast<size_t>(uristring.length()));
     pdu->addURIQuery("getEventSetup");
     get_request(pdu, req_getEventSetup);
 }
@@ -207,42 +207,42 @@ void sensor::updateConfig(QVariant updatevalues){
 
     payload.resize(len);
 
-    char* uristring = uri.toLatin1().data();
+    QByteArray uristring = resource->getUri();
     CoapPDU *pdu = new CoapPDU();
-    pdu->setURI(uristring, strlen(uristring));
+    pdu->setURI(uristring.data(), static_cast<size_t>(uristring.length()));
     pdu->addURIQuery("eventsetup");
 
     put_request(pdu, req_updateEventsetup, payload);
 }
 
 void sensor::flashSave(){
-    char* uristring = uri.toLatin1().data();
+    QByteArray uristring = resource->getUri();
     CoapPDU *pdu = new CoapPDU();
-    pdu->setURI(uristring, strlen(uristring));
+    pdu->setURI(uristring.data(), static_cast<size_t>(uristring.length()));
     pdu->addURIQuery("saveSetup");
     get_request(pdu, req_saveSetup);
 }
 
 void sensor::getpairingslist(){
-    char* uristring = uri.toLatin1().data();
+    QByteArray uristring = resource->getUri();
     CoapPDU *pdu = new CoapPDU();
-    pdu->setURI(uristring, strlen(uristring));
+    pdu->setURI(uristring.data(), static_cast<size_t>(uristring.length()));
     pdu->addURIQuery("pairings");
     get_request(pdu, req_pairingslist);
 }
 
 QVariant sensor::clearpairingslist(){
-    char* uristring = uri.toLatin1().data();
+    QByteArray uristring = resource->getUri();
     CoapPDU *pdu = new CoapPDU();
-    pdu->setURI(uristring, strlen(uristring));
+    pdu->setURI(uristring.data(), static_cast<size_t>(uristring.length()));
     pdu->addURIQuery("pairRemoveAll");
     return put_request(pdu, req_clearparings, nullptr);
 }
 
-uint16_t sensor::removeItems(QByteArray arr){
-    char* uristring = uri.toLatin1().data();
+QByteArray sensor::removeItems(QByteArray arr){
+    QByteArray uristring = resource->getUri();
     CoapPDU *pdu = new CoapPDU();
-    pdu->setURI(uristring, strlen(uristring));
+    pdu->setURI(uristring.data(), static_cast<size_t>(uristring.length()));
     pdu->addURIQuery("pairRemoveIndex");
 
     QByteArray payload;
@@ -361,9 +361,9 @@ QVariant sensor::pair(QVariant pairdata){
 
     payload.resize(static_cast<int>(static_cast<uint8_t*>(cmp.buf) - reinterpret_cast<uint8_t*>(payload.data())));
 
-    char* uristring = uri.toLatin1().data();
+    QByteArray uristring = resource->getUri();
     CoapPDU *pdu = new CoapPDU();
-    pdu->setURI(uristring, strlen(uristring));
+    pdu->setURI(uristring.data(), static_cast<size_t>(uristring.length()));
     pdu->addURIQuery("join");
 
     return put_request(pdu, req_pairsensor, payload);
@@ -392,9 +392,9 @@ void sensor::testEvents(QVariant event, QVariant value){
     cmp_write_u8(&cmp, 0);  //For now just send a zero as payload
     payload.resize(static_cast<int>(static_cast<uint8_t*>(cmp.buf) - reinterpret_cast<uint8_t*>(payload.data())));
 
-    char* uristring = uri.toLatin1().data();
+    QByteArray uristring = resource->getUri();
     CoapPDU *pdu = new CoapPDU();
-    pdu->setURI(uristring, strlen(uristring));
+    pdu->setURI(uristring.data(), static_cast<size_t>(uristring.length()));
     pdu->addURIQuery("postEvent");
 
     put_request(pdu, req_testevent, payload);
@@ -424,17 +424,20 @@ void sensor::nodeNotResponding(msgid token){
     qDebug() << "Token " << token.number << " timed out";
 }
 
-QVariant sensor::parseAppOctetFormat(msgid token, QByteArray payload, CoapPDU::Code code) {
+QVariant sensor::parseAppOctetFormat(QByteArray token, QByteArray payload, CoapPDU::Code code) {
     int cont = 0;
     cmp_ctx_t cmp;
     cmp_init(&cmp, payload.data(), buf_reader, nullptr);
+
+    int req = getTokenref(token);
+
 
     do{
         cmp_object_t obj;
         if(!cmp_read_object(&cmp, &obj)) return QVariant(0);
         QVariantMap result = cmpobjectToVariant(obj, &cmp).toMap();
 
-            switch(token.req){
+            switch(req){
             case req_RangeMinValue:
                 RangeMin = obj;
                 emit rangeMinValueReceived(result);
@@ -445,19 +448,19 @@ QVariant sensor::parseAppOctetFormat(msgid token, QByteArray payload, CoapPDU::C
                 break;
             case req_observe:
                 if(code < 128){
-                    qDebug() << "Start observing: " << uri;
-                    emit observe_started(result, token.number);
-                    disableTokenRemoval(token.number);
-                    changeTokenRef(token.number, observe_monitor);
+                    qDebug() << "Start observing: " << resource->getUri();
+                    emit observe_started(result, token);
+                    //disableTokenRemoval(token.number);
+                    //changeTokenRef(token.number, observe_monitor);
                 }
                 else{
-                    emit observe_failed(token.number);
+                    emit observe_failed(token);
                     break;
                 }
             [[clang::fallthrough]]; case observe_monitor:
             [[clang::fallthrough]]; case req_currentValue:
                 LastValue = obj;
-                emit currentValueChanged(token.number, result);
+                emit currentValueChanged(token, result);
                 valueUpdate(obj);
                 break;
             case req_aboveEventValue:
@@ -512,7 +515,7 @@ QVariant sensor::parseAppOctetFormat(msgid token, QByteArray payload, CoapPDU::C
             case req_setCommand:
                 LastValue = obj;
                 valueUpdate(obj);
-                emit currentValueChanged(token.number, result);
+                emit currentValueChanged(token, result);
                 qDebug() << "req_setCommand";
                 break;
             case req_testevent:
@@ -523,7 +526,7 @@ QVariant sensor::parseAppOctetFormat(msgid token, QByteArray payload, CoapPDU::C
     return QVariant(0);
 }
 
-pulsecounter::pulsecounter(node *parent, QString uri, QVariantMap attributes) : sensor(parent, uri, attributes){
+pulsecounter::pulsecounter(node *parent, coap_resource *resource) : sensor(parent, resource){
 
 }
 

@@ -1,52 +1,118 @@
 #include "node.h"
 #include <QRandomGenerator>
 
-suinterface::suinterface(QHostAddress addr) : wsn(addr){
+#include "coap_engine.h"
 
-
-
+suinterface::suinterface(QHostAddress addr, quint16 port){
+    this->addr = addr;
+    this->port = port;
 }
 
-quint16 suinterface::get_request(CoapPDU *pdu, enum request req, QByteArray payload, quint8 allow_retry){
-    msgid t;
-    t.req = req;
-    t.number = static_cast<uint16_t>(QRandomGenerator::global()->generate());
+QByteArray suinterface::get_request(CoapPDU *pdu, int req, QByteArray payload, quint8 allow_retry){
+
+    quint32 t = QRandomGenerator::global()->generate();
+
+    QByteArray token;
+
+    token.append(static_cast<char>(t));
+    token.append(static_cast<char>(t >> 8));
+    token.append(static_cast<char>(t >> 16));
+    token.append(static_cast<char>(t >> 24));
 
     pdu->setType(CoapPDU::COAP_CONFIRMABLE);
     pdu->setCode(CoapPDU::COAP_GET);
-    pdu->setToken((uint8_t*)&t.number,2);
+    pdu->setToken(reinterpret_cast<uint8_t*>(token.data()), static_cast<uint8_t>(token.length()));
 
     enum CoapPDU::ContentFormat ct = CoapPDU::COAP_CONTENT_FORMAT_APP_OCTET;
-    pdu->addOption(CoapPDU::COAP_OPTION_CONTENT_FORMAT,1,(uint8_t*)&ct);
-    pdu->setMessageID(t.number);
+    pdu->addOption(CoapPDU::COAP_OPTION_CONTENT_FORMAT,1,reinterpret_cast<uint8_t*>(&ct));
+    pdu->setMessageID(1);
 
-    char tmp[30];
-    int len;
-    pdu->getURI(tmp,30, &len);
+    new coap_transaction(addr, port, pdu, this, payload);
 
-    send(pdu, t, payload, allow_retry);
+    setTokenref(token, req);
 
-    return t.number;
+    return token;
 }
 
-quint16 suinterface::put_request(CoapPDU *pdu, enum request req, QByteArray payload, quint8 allow_retry){
-    msgid t;
-    t.req = req;
-    t.number = static_cast<uint16_t>(QRandomGenerator::global()->generate());
+QByteArray suinterface::put_request(CoapPDU *pdu, int req, QByteArray payload, quint8 allow_retry){
+
+    quint32 t = QRandomGenerator::global()->generate();
+
+    QByteArray token;
+
+    token.append(static_cast<char>(t));
+    token.append(static_cast<char>(t >> 8));
+    token.append(static_cast<char>(t >> 16));
+    token.append(static_cast<char>(t >> 24));
 
     pdu->setType(CoapPDU::COAP_CONFIRMABLE);
     pdu->setCode(CoapPDU::COAP_PUT);
-
-    //Set the token, if it is not set beforehand
-    if(pdu->getTokenLength() <= 0){
-        pdu->setToken((uint8_t*)&t.number,2);
-    }
+    pdu->setToken(reinterpret_cast<uint8_t*>(token.data()), static_cast<uint8_t>(token.length()));
 
     enum CoapPDU::ContentFormat ct = CoapPDU::COAP_CONTENT_FORMAT_APP_OCTET;
-    pdu->addOption(CoapPDU::COAP_OPTION_CONTENT_FORMAT,1,(uint8_t*)&ct);
-    pdu->setMessageID(t.number);
+    pdu->addOption(CoapPDU::COAP_OPTION_CONTENT_FORMAT,1,reinterpret_cast<uint8_t*>(&ct));
+    pdu->setMessageID(1);
 
-    send(pdu, t, payload, allow_retry);
+    new coap_transaction(addr, port, pdu, this, payload);
 
-    return t.number;
+    setTokenref(token, req);
+
+    return token;
+}
+
+QByteArray suinterface::request(CoapPDU *pdu, int req, QByteArray payload){
+
+    quint32 t = QRandomGenerator::global()->generate();
+
+    QByteArray token;
+
+    token.append(static_cast<char>(t));
+    token.append(static_cast<char>(t >> 8));
+    token.append(static_cast<char>(t >> 16));
+    token.append(static_cast<char>(t >> 24));
+
+    pdu->setToken(reinterpret_cast<uint8_t*>(token.data()), static_cast<uint8_t>(token.length()));
+
+    new coap_transaction(addr, port, pdu, this, payload);
+
+    setTokenref(token, req);
+
+    return token;
+}
+
+//Returns an acknowledment, if that is needed
+void suinterface::parseMessage(QByteArray token, QByteArray message, CoapPDU::Code code, enum CoapPDU::ContentFormat ct){
+
+    switch(ct){
+    case CoapPDU::COAP_CONTENT_FORMAT_TEXT_PLAIN:
+        parseTextPlainFormat(token, message);
+        break;
+    case CoapPDU::COAP_CONTENT_FORMAT_APP_LINK:
+        parseAppLinkFormat(token, message);
+        break;
+    case CoapPDU::COAP_CONTENT_FORMAT_APP_XML:
+        parseAppXmlFormat(token, message);
+        qDebug() << "CoapPDU::COAP_CONTENT_FORMAT_APP_XML";
+        break;
+    case CoapPDU::COAP_CONTENT_FORMAT_APP_OCTET:
+        parseAppOctetFormat(token, message, code);
+        break;
+    case CoapPDU::COAP_CONTENT_FORMAT_APP_EXI:
+        parseAppExiFormat(token, message);
+        qDebug() << "CoapPDU::COAP_CONTENT_FORMAT_APP_EXI";
+        break;
+    case CoapPDU::COAP_CONTENT_FORMAT_APP_JSON:
+        parseAppJSonFormat(token, message);
+        qDebug() << "CoapPDU::COAP_CONTENT_FORMAT_APP_JSON";
+        break;
+    }
+}
+#include "QHash"
+int suinterface::getTokenref(QByteArray token){
+    QHash<QByteArray, int>::iterator i = tokenref.find(token);
+    return i.value();
+}
+
+void suinterface::setTokenref(QByteArray token, int ref){
+    tokenref.insert(token, ref);
 }

@@ -26,7 +26,6 @@ DEFINES += QT_DEPRECATED_WARNINGS
 
 SOURCES += \
         sensorsunleashed.cpp \
-        wsn.cpp \
         socket.cpp \
         cantcoap/cantcoap.cpp \
         node.cpp \
@@ -35,12 +34,16 @@ SOURCES += \
         cmp.c \
         crc16.c \
         suinterface.cpp \
-        su_message.cpp
+        su_message.cpp \
+    coap_server.cpp \
+    coap_transaction.cpp \
+    coap_engine.cpp \
+    coap_transmit.cpp \
+    coap_resource.cpp
 
 HEADERS += \
         sensorsunleashed.h \
         sensorsunleashed_global.h \ 
-        wsn.h \
         cantcoap/cantcoap.h \
         cantcoap/dbg.h \
         cantcoap/sysdep.h \
@@ -48,7 +51,12 @@ HEADERS += \
         cmp_helpers.h \
         cmp.h \
         crc16.h \
-        su_message.h
+        su_message.h \
+    coap_server.h \
+    coap_transaction.h \
+    coap_engine.h \
+    wsn.h \
+    coap_resource.h
 
 unix {
     target.path = /usr/lib
