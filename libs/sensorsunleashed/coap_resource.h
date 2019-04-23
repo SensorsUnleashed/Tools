@@ -4,6 +4,7 @@
 #include <QVariantMap>
 #include <cantcoap/cantcoap.h>
 #include <QtDebug>
+#include <QHostAddress>
 
 class coap_resource
 {
@@ -16,27 +17,15 @@ public:
     QVariantMap getAttributes(){ return attributes; }
 
 
-    virtual void handleGET(CoapPDU *request, CoapPDU *response, QByteArray payload){ Q_UNUSED(request); Q_UNUSED(response); Q_UNUSED(payload); qDebug() << "Implement handleGET";}
+    virtual void handleGET(CoapPDU *request, CoapPDU *response, QByteArray* payload){ Q_UNUSED(request); Q_UNUSED(response); Q_UNUSED(payload); qDebug() << "Implement handleGET";}
     virtual void handlePOST(CoapPDU *request, CoapPDU *response){ Q_UNUSED(request); Q_UNUSED(response); qDebug() << "Implement handlePOST";}
     virtual void handlePUT(CoapPDU *request, CoapPDU *response){ Q_UNUSED(request); Q_UNUSED(response); qDebug() << "Implement handlePUT";}
     virtual void handleDELETE(CoapPDU *request, CoapPDU *response){ Q_UNUSED(request); Q_UNUSED(response); qDebug() << "Implement handleDELETE";}
 
 private:
     QByteArray uri;
+    QHostAddress addr;
     QVariantMap attributes;
 };
-
-//class coap_resource : public QObject{
-//    Q_OBJECT
-
-//public:
-//    char* getUri(){ return uri.data(); }
-
-
-//protected:
-//    QByteArray uri;
-//    QByteArray attributes;
-
-//};
 
 #endif // COAP_RESOURCE_H

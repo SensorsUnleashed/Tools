@@ -27,7 +27,7 @@ QByteArray suinterface::get_request(CoapPDU *pdu, int req, QByteArray payload, q
     pdu->addOption(CoapPDU::COAP_OPTION_CONTENT_FORMAT,1,reinterpret_cast<uint8_t*>(&ct));
     pdu->setMessageID(1);
 
-    new coap_transaction(addr, port, pdu, this, payload);
+    new coap_client_transaction(addr, port, pdu, this, payload);
 
     setTokenref(token, req);
 
@@ -53,7 +53,7 @@ QByteArray suinterface::put_request(CoapPDU *pdu, int req, QByteArray payload, q
     pdu->addOption(CoapPDU::COAP_OPTION_CONTENT_FORMAT,1,reinterpret_cast<uint8_t*>(&ct));
     pdu->setMessageID(1);
 
-    new coap_transaction(addr, port, pdu, this, payload);
+    new coap_client_transaction(addr, port, pdu, this, payload);
 
     setTokenref(token, req);
 
@@ -73,7 +73,7 @@ QByteArray suinterface::request(CoapPDU *pdu, int req, QByteArray payload){
 
     pdu->setToken(reinterpret_cast<uint8_t*>(token.data()), static_cast<uint8_t>(token.length()));
 
-    new coap_transaction(addr, port, pdu, this, payload);
+    new coap_client_transaction(addr, port, pdu, this, payload);
 
     setTokenref(token, req);
 

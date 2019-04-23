@@ -41,29 +41,25 @@ sensor::sensor(node* parent, coap_resource *resource) : suinterface(parent->getA
     this->parent = parent;
     this->resource = resource;
 
-    ip = parent->getAddress();
-    eventsActive.as.u8 = 0;
-    eventsActive.type = CMP_TYPE_UINT8;
-    LastValue.as.s8 = 0;
-    LastValue.type = CMP_TYPE_SINT8;
-    AboveEventAt.as.s8 = 0;
-    AboveEventAt.type = CMP_TYPE_SINT8;
-    BelowEventAt.as.s8 = 0;
-    BelowEventAt.type = CMP_TYPE_SINT8;
-    ChangeEvent.as.s8 = 0;
-    ChangeEvent.type = CMP_TYPE_SINT8;
-    RangeMin.as.s8 = 0;
-    RangeMin.type = CMP_TYPE_SINT8;
-    RangeMax.as.s8 = 0;
-    RangeMax.type = CMP_TYPE_SINT8;
+//    eventsActive.as.u8 = 0;
+//    eventsActive.type = CMP_TYPE_UINT8;
+
+    cmp_object_t v;
+    v.as.s8 = 0;
+    v.type = CMP_TYPE_SINT8;
+    neventsActive = new suValue(v);
+    nLastValue = new suValue(v);
+    nAboveEventAt = new suValue(v);
+    nBelowEventAt = new suValue(v);
+    nChangeEvent = new suValue(v);
+    nRangeMin = new suValue(v);
+    nRangeMax = new suValue(v);
 
     init = 0;
 }
 
 /* We create a dummy sensor, used only if a pairing could not be resolved */
 sensor::sensor(QString ipaddr, QString uri): suinterface(QHostAddress(ipaddr), 0){
-    ip = QHostAddress(ipaddr);
-
     resource = new coap_resource();
     resource->setUri(uri.toLatin1().data());
     parent = nullptr;
@@ -82,28 +78,28 @@ void sensor::initSensor(){
 QVariant sensor::getConfigValues(){
     QVariantList list;
 
-    QVariantMap result;
-    result = cmpobjectToVariant(LastValue).toMap();
-    result["id"] = "LastValue";
-    list.append(result);
-    result = cmpobjectToVariant(AboveEventAt).toMap();
-    result["id"] = "AboveEventAt";
-    list.append(result);
-    result = cmpobjectToVariant(BelowEventAt).toMap();
-    result["id"] = "BelowEventAt";
-    list.append(result);
-    result = cmpobjectToVariant(ChangeEvent).toMap();
-    result["id"] = "ChangeEvent";
-    list.append(result);
-    result = cmpobjectToVariant(RangeMin).toMap();
-    result["id"] = "RangeMin";
-    list.append(result);
-    result = cmpobjectToVariant(RangeMax).toMap();
-    result["id"] = "RangeMax";
-    list.append(result);
-    result = cmpobjectToVariant(eventsActive).toMap();
-    result["id"] = "eventsActive";
-    list.append(result);
+//    QVariantMap result;
+//    result = cmpobjectToVariant(LastValue).toMap();
+//    result["id"] = "LastValue";
+//    list.append(result);
+//    result = cmpobjectToVariant(AboveEventAt).toMap();
+//    result["id"] = "AboveEventAt";
+//    list.append(result);
+//    result = cmpobjectToVariant(BelowEventAt).toMap();
+//    result["id"] = "BelowEventAt";
+//    list.append(result);
+//    result = cmpobjectToVariant(ChangeEvent).toMap();
+//    result["id"] = "ChangeEvent";
+//    list.append(result);
+//    result = cmpobjectToVariant(RangeMin).toMap();
+//    result["id"] = "RangeMin";
+//    list.append(result);
+//    result = cmpobjectToVariant(RangeMax).toMap();
+//    result["id"] = "RangeMax";
+//    list.append(result);
+//    result = cmpobjectToVariant(eventsActive).toMap();
+//    result["id"] = "eventsActive";
+//    list.append(result);
 
     return list;
 }
@@ -196,14 +192,18 @@ void sensor::updateConfig(QVariant updatevalues){
     int len = 0;
 
     //We store the values in the same containers as with what received
-    if(!values.contains("AboveEventAt")) return;
-    len += encode(payload.data() + len, AboveEventAt, values["AboveEventAt"]);
-    if(!values.contains("BelowEventAt")) return;
-    len += encode(payload.data() + len, BelowEventAt, values["BelowEventAt"]);
-    if(!values.contains("ChangeEvent")) return;
-    len += encode(payload.data() + len, ChangeEvent, values["ChangeEvent"]);
-    if(!values.contains("eventsActive")) return;
-    len += encode(payload.data() + len, eventsActive, values["eventsActive"]);
+//    if(!values.contains("AboveEventAt")) return;
+//    len += encode(payload.data() + len, AboveEventAt, values["AboveEventAt"]);
+//    if(!values.contains("BelowEventAt")) return;
+//    len += encode(payload.data() + len, BelowEventAt, values["BelowEventAt"]);
+//    if(!values.contains("ChangeEvent")) return;
+//    len += encode(payload.data() + len, ChangeEvent, values["ChangeEvent"]);
+//    if(!values.contains("eventsActive")) return;
+//    len += encode(payload.data() + len, eventsActive, values["eventsActive"]);
+
+
+
+
 
     payload.resize(len);
 
@@ -439,11 +439,11 @@ QVariant sensor::parseAppOctetFormat(QByteArray token, QByteArray payload, CoapP
 
             switch(req){
             case req_RangeMinValue:
-                RangeMin = obj;
+                nRangeMin->update(obj);
                 emit rangeMinValueReceived(result);
                 break;
             case req_RangeMaxValue:
-                RangeMax = obj;
+                nRangeMax->update(obj);
                 emit rangeMaxValueReceived(result);
                 break;
             case req_observe:
@@ -459,30 +459,30 @@ QVariant sensor::parseAppOctetFormat(QByteArray token, QByteArray payload, CoapP
                 }
             [[clang::fallthrough]]; case observe_monitor:
             [[clang::fallthrough]]; case req_currentValue:
-                LastValue = obj;
+                nLastValue->update(obj);
                 emit currentValueChanged(token, result);
                 valueUpdate(obj);
                 break;
             case req_aboveEventValue:
-                AboveEventAt = obj;
+                nAboveEventAt->update(obj);
                 emit aboveEventValueChanged(result);
                 break;
             case req_belowEventValue:
-                BelowEventAt = obj;
+                nBelowEventAt->update(obj);
                 emit belowEventValueChanged(result);
                 break;
             case req_changeEventAt:
-                ChangeEvent = obj;
+                nChangeEvent->update(obj);
                 emit changeEventValueChanged(result);
                 break;
             case req_getEventSetup:
-                AboveEventAt = obj;
+                nAboveEventAt->update(obj);
                 if(!cmp_read_object(&cmp, &obj)) return QVariant(0);
-                BelowEventAt = obj;
+                nBelowEventAt->update(obj);
                 if(!cmp_read_object(&cmp, &obj)) return QVariant(0);
-                ChangeEvent = obj;
+                nChangeEvent->update(obj);
                 if(!cmp_read_object(&cmp, &obj)) return QVariant(0);
-                eventsActive = obj;
+                neventsActive->update(obj);
                 emit eventSetupRdy();
                 break;
             case req_updateEventsetup:
@@ -513,7 +513,7 @@ QVariant sensor::parseAppOctetFormat(QByteArray token, QByteArray payload, CoapP
                 break;
                 //When we request a state change in the device, it always returns its current value
             case req_setCommand:
-                LastValue = obj;
+                nLastValue->update(obj);
                 valueUpdate(obj);
                 emit currentValueChanged(token, result);
                 qDebug() << "req_setCommand";

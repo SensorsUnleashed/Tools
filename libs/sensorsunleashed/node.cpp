@@ -36,12 +36,10 @@
 //Created from QML
 node::node(QHostAddress addr, quint16 port) : suinterface(addr, port)
 {
-    ip = addr;
-    this->port = port;
     prefix_len = 64; //This should be taken from somewhere in the database
     uri = "su/nodeinfo";
     m_commStatus = UNKNOWN;
-    qDebug() << "Node: " << ip << " created";
+    qDebug() << "Node: " << addr << " created";
 }
 
 /* Request the list of sensors from the node */
@@ -67,7 +65,7 @@ void node::requestLinks(){
     pdu->setMessageID(1);
     pdu->setURI(const_cast<char*>(uristring), strlen(uristring));
 
-    new coap_transaction(ip, port, pdu, this, nullptr);
+    new coap_client_transaction(addr, port, pdu, this, nullptr);
 }
 
 /* Parse the list of published sensors from this node */
@@ -101,7 +99,7 @@ void node::addSensor(coap_resource* resource){
     else if(uri.compare(".well-known/core") != 0){
 
         for(int i=0; i<sensors.count(); i++){
-            if(sensors[i]->getUri().compare(uri) == 0){
+            if(QString(sensors[i]->getUri()).compare(uri) == 0){
                 return;
             }
         }
@@ -128,7 +126,7 @@ void node::addSensor(coap_resource* resource){
         }
 
         sensors.append(s);
-
+        emit sensorCreated(s);
         emit sensorFound(uri, s->getClassType());
     }
 }

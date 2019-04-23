@@ -1,7 +1,11 @@
 #include "coap_server.h"
 
 #include "coap_engine.h"
+#include "coap_observer.h"
 #include <string.h>
+#include <QUrl>
+#include <QUrlQuery>
+#include <coap.h>
 
 coap_server::coap_server()
 {
@@ -34,19 +38,27 @@ coap_transaction* coap_server::handleRequest(CoapPDU *recvPDU, QHostAddress addr
     CoapPDU* response = new CoapPDU;
     CoapPDU::Code code = recvPDU->getCode();
     QByteArray payload;
+    int observe = -1;
 
-    response->setCode(recvPDU->getCode());
-    response->setToken(recvPDU->getTokenPointer(), recvPDU->getTokenLength());
+    CoapPDU::CoapOption* options = coap::check_option(recvPDU, CoapPDU::COAP_OPTION_OBSERVE);
+    if(options != nullptr){
+        observe = 0;    //To avoid problems where optionValueLength is less then sizeof(int)
+        memcpy(&observe, options->optionValuePointer, options->optionValueLength);
+    }
+
+    response->setCode(code);
+    response->setToken(recvPDU->getTokenPointer(), static_cast<uint8_t>(recvPDU->getTokenLength()));
     response->setType(recvPDU->getType());
     response->setMessageID(recvPDU->getMessageID()+1);
 
+    char dst[50] = {0};
+    int outLen;
     coap_resource* res = nullptr;
-    for(int i=0; i<resources.count(); i++){
-        char dst[50] = {0};
-        int outLen;
-        if(recvPDU->getURI(dst, 50, &outLen) == 0){
-            char* s = resources[i]->getUri().data();
-            if(strcmp(s, dst) == 0){
+    if(recvPDU->getURI(dst, 50, &outLen) == 0){
+        QUrl reqUrl(dst);
+        for(int i=0; i<resources.count(); i++){
+            QUrl resUrl(resources[i]->getUri());
+            if(reqUrl.path() == resUrl.path()){
                 res = resources[i];
                 break;
             }
@@ -55,7 +67,15 @@ coap_transaction* coap_server::handleRequest(CoapPDU *recvPDU, QHostAddress addr
 
     if(res){
         if(code == CoapPDU::COAP_GET){
-            res->handleGET(recvPDU, response, payload);
+            if(observe == 0){    //Register observer
+                remove_observer_by_uri(res, addr, port);
+                coap_observer* c = new coap_observer(recvPDU, res, addr, port);
+                observers.append(c);
+            }
+            else if(observe == 1){ //De-register observer
+                remove_observer_by_uri(res, addr, port);
+            }
+            res->handleGET(recvPDU, response, &payload);           
         }
         else if(code == CoapPDU::COAP_POST){
             res->handlePOST(recvPDU, response);
@@ -72,7 +92,7 @@ coap_transaction* coap_server::handleRequest(CoapPDU *recvPDU, QHostAddress addr
     }
     else{   //Unknown resource
         if(code == CoapPDU::COAP_GET){
-            handleGET(recvPDU, response, payload);
+            handleGET(recvPDU, response, &payload);
         }
         else if(code == CoapPDU::COAP_POST){
             handlePOST(recvPDU, response);
@@ -88,33 +108,40 @@ coap_transaction* coap_server::handleRequest(CoapPDU *recvPDU, QHostAddress addr
         }
     }
 
-    return new coap_transaction(addr, port, response, nullptr, payload);
+    return new coap_server_transaction(addr, port, response, this, *&payload);
 }
 
+void coap_server::remove_observer_by_uri(coap_resource* res, QHostAddress addr, quint16 port){
+    for(int i=0; i<observers.count(); i++){
+        coap_observer* o = observers[i];
+        if(o->get() == res && o->getAddr() == addr && o->getPort() == port) {
+            observers.removeAt(i);
+            break;
+        }
+    }
+}
 
-void coap_server::handleGET(CoapPDU *request, CoapPDU *response, QByteArray payload){
+void coap_server::handleObservers(coap_resource* res){
+    /* Find out if anyone is observing the resource */
+    for(int i=0; i<observers.count(); i++){
+        coap_observer* o = observers[i];
+        if(o->get() == res){
+            CoapPDU* recvPDU = new CoapPDU();
+            CoapPDU* response = new CoapPDU();
+            o->prepare(recvPDU, response);
+            QByteArray payload;
+            res->handleGET(recvPDU, response, &payload);
+            new coap_server_transaction(o->getAddr(), o->getPort(), response, this, *&payload);
+        }
+    }
+}
+
+void coap_server::handleGET(CoapPDU *request, CoapPDU *response, QByteArray *payload){
     Q_UNUSED(request);
-    Q_UNUSED(response);
-    Q_UNUSED(payload);
-
-    //    pdu->setType(CoapPDU::COAP_CONFIRMABLE);
-    //    pdu->setCode(CoapPDU::COAP_GET);
-    //    pdu->setToken((uint8_t*)&t.number,2);
-
-    //    enum CoapPDU::ContentFormat ct = CoapPDU::COAP_CONTENT_FORMAT_APP_OCTET;
-    //    pdu->addOption(CoapPDU::COAP_OPTION_CONTENT_FORMAT,1,(uint8_t*)&ct);
-    //    pdu->setMessageID(t.number);
-
-    //    char tmp[30];
-    //    int len;
-    //    pdu->getURI(tmp,30, &len);
-
-    //    coap_engine* en = coap_engine::getInstance();
-    //    en->transactionListAdd(new coap_transaction(addr, pdu, this, payload));
-    //    //send(pdu, t, payload, allow_retry);
-
-
-    qDebug() << "Implement handleGET";
+    enum CoapPDU::ContentFormat ct = CoapPDU::COAP_CONTENT_FORMAT_TEXT_PLAIN;
+    response->setCode(CoapPDU::COAP_BAD_REQUEST);
+    response->addOption(CoapPDU::COAP_OPTION_CONTENT_FORMAT,1,reinterpret_cast<uint8_t*>(&ct));
+    payload->append("Resource unknown");
 }
 
 void coap_server::handlePOST(CoapPDU *request, CoapPDU *response){
@@ -144,22 +171,22 @@ void res_core_well_known::handleGET(CoapPDU *request, CoapPDU *response, QByteAr
 
     qDebug() << "coap_server::res_core_well_known::handleGET";
 
-    /* Each entry in the this entity manager is named /RM1, /RM2, /RM3 etc..*/
-    int i = 1;
+    int i = 0;
     while(1){
         coap_resource* r = parent->getResource(i);
         if(r){
-            QString str = "<" + r->getUri() + ">";
-            i++;
-            payload->append(str);
+            if(r != this){
+                QString str = "<" + r->getUri() + ">";
+                payload->append(str);
+            }
         }
         else{
             break;
         }
+        i++;
     }
 
     enum CoapPDU::ContentFormat ct = CoapPDU::COAP_CONTENT_FORMAT_APP_LINK;
     response->addOption(CoapPDU::COAP_OPTION_CONTENT_FORMAT,1,reinterpret_cast<uint8_t*>(&ct));
-
 }
 

@@ -39,7 +39,12 @@ SOURCES += \
     coap_transaction.cpp \
     coap_engine.cpp \
     coap_transmit.cpp \
-    coap_resource.cpp
+    coap_resource.cpp \
+    messagepack.cpp \
+    coap.cpp \
+    coap_observer.cpp
+
+#    messagepack/cmp.c \
 
 HEADERS += \
         sensorsunleashed.h \
@@ -56,7 +61,11 @@ HEADERS += \
     coap_transaction.h \
     coap_engine.h \
     wsn.h \
-    coap_resource.h
+    coap_resource.h \
+    messagepack.h \
+    coap.h \
+    coap_observer.h
+    #messagepack/cmp.h \
 
 unix {
     target.path = /usr/lib

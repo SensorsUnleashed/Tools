@@ -59,21 +59,9 @@ void sensorlog::valueUpdate(quint16 token, QVariant result){
 
     QString value, minstr, maxstr;
 
-    cmp_object_t val = s->getLastValue();
-    cmp_object_t max = s->getMaxLimit();
-    cmp_object_t min = s->getMinLimit();
-
-    if(cmp_object_is_uinteger(&val)){
-        uint64_t v;
-        cmp_object_as_uinteger(&val, &v);
-        value = QString::number(v);
-
-        cmp_object_as_uinteger(&min, &v);
-        minstr = QString::number(v);
-
-        cmp_object_as_uinteger(&max, &v);
-        maxstr = QString::number(v);
-    }
+    value = s->getnLastValue()->toString();
+    minstr = s->getMinLimit()->toString();
+    maxstr = s->getMaxLimit()->toString();
 
     QString querystring = "INSERT INTO " + tablename + "(Timestamp,Value,Min,Max,Logid) VALUES (" + QString::number(epoch) +"," + value + ", " + minstr + "," + maxstr + "," + QString::number(logid) + ");";
 

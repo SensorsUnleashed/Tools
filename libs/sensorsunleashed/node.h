@@ -41,6 +41,7 @@
 #include "wsn.h"
 #include <QDateTime>
 #include <coap_resource.h>
+#include <messagepack.h>
 
 class pairlist;
 class sensorstore;
@@ -60,15 +61,18 @@ public:
 
     void parseMessage(QByteArray token, QByteArray message, CoapPDU::Code code, enum CoapPDU::ContentFormat ct);
 
+    QHostAddress getAddress() { return addr; }
+    quint16 getPort() { return port; }
+    Q_INVOKABLE QString getAddressStr() {return addr.toString(); }
+
 private:
+
+protected:
     QHostAddress addr;
     quint16 port;
 
-protected:
     QByteArray get_request(CoapPDU *pdu, int req, QByteArray payload=nullptr, quint8 allow_retry=0);
     QByteArray put_request(CoapPDU *pdu, int req, QByteArray payload=nullptr, quint8 allow_retry=0);
-
-
 
     int getTokenref(QByteArray token);
     void setTokenref(QByteArray token, int ref);
@@ -94,8 +98,7 @@ public:
     sensor(QString ipaddr, QString uri);
 
     node* getParent(){ return parent;}
-    QString getUri(){ return resource->getUri(); }
-    QString getAddressStr() {return ip.toString(); }
+    QByteArray getUri(){ return resource->getUri(); }
 
     void initSensor();
     void requestRangeMin();
@@ -132,28 +135,40 @@ public:
     virtual void valueUpdate(cmp_object_t) {}
     virtual int8_t getValueType(){ return CMP_TYPE_UINT8; }
 
-    cmp_object_t getLastValue(){ return LastValue; }
-    cmp_object_t getMaxLimit(){ return RangeMax; }
-    cmp_object_t getMinLimit(){ return RangeMin; }
+    //cmp_object_t getLastValue(){ return LastValue; }
+    //cmp_object_t getMaxLimit(){ return RangeMax; }
+    //cmp_object_t getMinLimit(){ return RangeMin; }
+
+    suValue* getnLastValue(){ return nLastValue; }
+    suValue* getMaxLimit(){ return nRangeMax; }
+    suValue* getMinLimit(){ return nRangeMin; }
 
 protected:
 
     //uint16_t put_request(CoapPDU *pdu, enum request req, QByteArray payload);
 
-    cmp_object_t eventsActive;		//All events on or Off
-    cmp_object_t LastValue;
-    cmp_object_t AboveEventAt;	//When resource crosses this line from low to high give an event (>=)
-    cmp_object_t BelowEventAt;	//When resource crosses this line from high to low give an event (<=)
-    cmp_object_t ChangeEvent;	//When value has changed more than changeEvent + lastevent value <>= value
-    cmp_object_t RangeMin;		//What is the minimum value this device can read
-    cmp_object_t RangeMax;		//What is the maximum value this device can read
+    suValue* neventsActive;		//All events on or Off
+    suValue* nLastValue;
+    suValue* nAboveEventAt;	//When resource crosses this line from low to high give an event (>=)
+    suValue* nBelowEventAt;	//When resource crosses this line from high to low give an event (<=)
+    suValue* nChangeEvent;	//When value has changed more than changeEvent + lastevent value <>= value
+    suValue* nRangeMin;		//What is the minimum value this device can read
+    suValue* nRangeMax;		//What is the maximum value this device can read
+
+
+//    cmp_object_t eventsActive;		//All events on or Off
+//    cmp_object_t LastValue;
+//    cmp_object_t AboveEventAt;	//When resource crosses this line from low to high give an event (>=)
+//    cmp_object_t BelowEventAt;	//When resource crosses this line from high to low give an event (<=)
+//    cmp_object_t ChangeEvent;	//When value has changed more than changeEvent + lastevent value <>= value
+//    cmp_object_t RangeMin;		//What is the minimum value this device can read
+//    cmp_object_t RangeMax;		//What is the maximum value this device can read
 
 private:
     node* parent;
     QVariantMap sensorinfo;
     //    QVector<msgid> token;
     pairlist* pairings;
-    QHostAddress ip;
     uint8_t init;   //Flag to indicate if sensor config has been requested or not
     coap_resource* resource;
     //uint16_t get_request(CoapPDU *pdu, enum request req, QByteArray payload=0);
@@ -211,7 +226,7 @@ public:
     QVariant getClassType(){ return "DefaultDevice.qml"; }
     int8_t getValueType(){ return CMP_TYPE_UINT16; }
 
-    uint16_t getLastValue(){ return LastValue.as.u16; }
+    //uint16_t getLastValue(){ return LastValue.as.u16; }
 protected:
 
 
@@ -227,9 +242,6 @@ public:
     node(QHostAddress addr, quint16 port = 5683);
 
     QVariant getDatabaseinfo(){ return databaseinfo; }
-    QHostAddress getAddress() { return ip; }
-    quint16 getPort() { return port; }
-    Q_INVOKABLE QString getAddressStr() {return ip.toString(); }
     void requestLinks();
 
     void updateLastSeenTime(int secSince){
@@ -273,8 +285,6 @@ protected:
 
 private:
     QString name;
-    QHostAddress ip;
-    quint16 port;
     QVariantMap linklist;
     uint16_t token;
     QDateTime lastSeen;
@@ -288,6 +298,7 @@ private:
     void addSensor(coap_resource* resource);
 
 signals:
+    void sensorCreated(sensor*);
     void sensorFound(QVariant sensorinfo, QVariant source);
     void requst_received(QString req, QVariantList result);
     void commStatusChanged();

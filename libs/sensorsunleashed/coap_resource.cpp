@@ -1,11 +1,10 @@
 #include "coap_resource.h"
 #include <QStringList>
+
 coap_resource::coap_resource(QString resourceDescription)
 {
 
     QStringList slist = resourceDescription.split(';', QString::SkipEmptyParts);
-    //QString uri;
-    //QVariantMap attributes;
 
     for(int j=0; j<slist.count(); j++){
         if(j==0){   //Uri
