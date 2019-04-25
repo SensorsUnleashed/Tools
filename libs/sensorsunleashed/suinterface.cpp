@@ -9,7 +9,7 @@ suinterface::suinterface(QHostAddress addr, quint16 port){
 }
 
 QByteArray suinterface::get_request(CoapPDU *pdu, int req, QByteArray payload, quint8 allow_retry){
-
+    Q_UNUSED(allow_retry);
     quint32 t = QRandomGenerator::global()->generate();
 
     QByteArray token;
@@ -35,7 +35,7 @@ QByteArray suinterface::get_request(CoapPDU *pdu, int req, QByteArray payload, q
 }
 
 QByteArray suinterface::put_request(CoapPDU *pdu, int req, QByteArray payload, quint8 allow_retry){
-
+    Q_UNUSED(allow_retry);
     quint32 t = QRandomGenerator::global()->generate();
 
     QByteArray token;

@@ -11,7 +11,7 @@ public:
     suapp();
 
 private:
-    char* command = "Z000000Z\r\n";
+    const char* command = "Z000000Z\r\n";
     pulsecounter* s1;
 
 public slots:

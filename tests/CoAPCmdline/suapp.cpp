@@ -3,7 +3,7 @@
 #include <coap_transaction.h>
 #include <QCoreApplication>
 
-suapp::suapp(QUrl* url) : suinterface(QHostAddress(url->host()), url->port(5683))
+suapp::suapp(QUrl* url) : suinterface(QHostAddress(url->host()), static_cast<uint16_t>((url->port(5683))))
 {
     qDebug() << url->scheme();
     qDebug() << url->host();
@@ -16,7 +16,11 @@ suapp::~suapp(){
 }
 
 QVariant suapp::parseTextPlainFormat(QByteArray token, QByteArray payload){
-    qDebug() << "suapp::parseTextPlainFormat " << payload << " token=" << token; return QVariant(0);
+    Q_UNUSED(token);
+    qDebug() << "suapp::parseTextPlainFormat ";
+    qDebug() << payload;
+    QCoreApplication::quit();
+    return QVariant(0);
 }
 
 QVariant suapp::parseAppLinkFormat(QByteArray token, QByteArray payload) {
@@ -34,8 +38,10 @@ QVariant suapp::parseAppXmlFormat(QByteArray token, QByteArray payload) {
 }
 
 QVariant suapp::parseAppOctetFormat(QByteArray token, QByteArray payload, CoapPDU::Code code) {
-    Q_UNUSED(payload); Q_UNUSED(token); Q_UNUSED(code); qDebug() << "suapp::parseAppOctetFormat Implement this";
-    QCoreApplication::quit();
+    Q_UNUSED(payload); Q_UNUSED(token); Q_UNUSED(code);
+    suValue val(payload);
+    qDebug() << val.toString();
+    //QCoreApplication::quit();
     return QVariant(0);
 }
 

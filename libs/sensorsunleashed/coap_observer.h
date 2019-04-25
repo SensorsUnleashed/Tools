@@ -11,13 +11,15 @@ public:
     coap_observer(CoapPDU *recvPDU, coap_resource* res, QHostAddress addr, quint16 port);
 
     coap_resource* get(){ return res; }
-    void prepare(CoapPDU* recvPDU, CoapPDU* response);
+    CoapPDU* prepare(CoapPDU* response);
     quint16 getPort(){ return port; }
     QHostAddress getAddr(){ return addr; }
 
 private:
-    int observer_counter;
-    CoapPDU recvPDU;
+    QByteArray uri;
+    uint32_t observer_counter;
+    uint16_t messageid;
+    CoapPDU* initialPDU;
     coap_resource *res;
     QHostAddress addr;
     quint16 port;

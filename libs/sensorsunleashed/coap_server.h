@@ -36,16 +36,23 @@ public:
     coap_server();
     virtual ~coap_server();
 
-    coap_transaction *handleRequest(CoapPDU *recvPDU, QHostAddress addr, quint16 port);
+    coap_transaction* getHandler(CoapPDU *recvPDU, QHostAddress addr, quint16 port);
+    coap_transaction* postHandler(CoapPDU *recvPDU, QHostAddress addr, quint16 port);
+    coap_transaction* putHandler(CoapPDU *recvPDU, QHostAddress addr, quint16 port);
+    coap_transaction* deleteHandler(CoapPDU *recvPDU, QHostAddress addr, quint16 port);
+    coap_resource* findResource(CoapPDU *PDU);
+
     void addResource(coap_resource* resource);
     coap_resource* getResource(int index);
     void handleObservers(coap_resource* res);
+    void receiverNotResponding(QHostAddress addr, quint16 port);
 private:
 
     QVector<coap_resource*> resources;
     QVector<coap_observer*> observers;
 
     res_core_well_known* core;
+    void remove_observer_by_addr(QHostAddress addr, quint16 port);
     void remove_observer_by_uri(coap_resource* res, QHostAddress addr, quint16 port);
 
 protected:

@@ -33,8 +33,7 @@ coap_resource* coap_server::getResource(int index){
     return r;
 }
 
-coap_transaction* coap_server::handleRequest(CoapPDU *recvPDU, QHostAddress addr, quint16 port){
-
+coap_transaction* coap_server::getHandler(CoapPDU *recvPDU, QHostAddress addr, quint16 port){
     CoapPDU* response = new CoapPDU;
     CoapPDU::Code code = recvPDU->getCode();
     QByteArray payload;
@@ -51,10 +50,61 @@ coap_transaction* coap_server::handleRequest(CoapPDU *recvPDU, QHostAddress addr
     response->setType(recvPDU->getType());
     response->setMessageID(recvPDU->getMessageID()+1);
 
+    coap_resource* res = findResource(recvPDU);
+    if(res){
+        if(observe == 0){    //Register observer
+            remove_observer_by_uri(res, addr, port);
+            coap_observer* c = new coap_observer(recvPDU, res, addr, port);
+            c->prepare(response);
+            observers.append(c);
+        }
+        else if(observe == 1){ //De-register observer
+            remove_observer_by_uri(res, addr, port);
+        }
+        res->handleGET(recvPDU, response, &payload);
+    }
+    else{   //Unknown resource
+    }
+    delete recvPDU;
+    return new coap_server_transaction(addr, port, response, this, *&payload);
+}
+
+coap_transaction* coap_server::postHandler(CoapPDU *recvPDU, QHostAddress addr, quint16 port){
+    CoapPDU* response = new CoapPDU;
+    QByteArray payload;
+    coap_resource* res = findResource(recvPDU);
+    if(res){
+        res->handlePOST(recvPDU, response);
+    }
+    delete recvPDU;
+    return new coap_server_transaction(addr, port, response, this, *&payload);
+}
+coap_transaction* coap_server::putHandler(CoapPDU *recvPDU, QHostAddress addr, quint16 port){
+    CoapPDU* response = new CoapPDU;
+    QByteArray payload;
+    coap_resource* res = findResource(recvPDU);
+    if(res){
+        res->handlePUT(recvPDU, response);
+    }
+    delete recvPDU;
+    return new coap_server_transaction(addr, port, response, this, *&payload);
+}
+coap_transaction* coap_server::deleteHandler(CoapPDU *recvPDU, QHostAddress addr, quint16 port){
+    CoapPDU* response = new CoapPDU;
+    QByteArray payload;
+    coap_resource* res = findResource(recvPDU);
+    if(res){
+        res->handleDELETE(recvPDU, response);
+    }
+    delete recvPDU;
+    return new coap_server_transaction(addr, port, response, this, *&payload);
+}
+
+coap_resource* coap_server::findResource(CoapPDU *PDU){
     char dst[50] = {0};
     int outLen;
     coap_resource* res = nullptr;
-    if(recvPDU->getURI(dst, 50, &outLen) == 0){
+    if(PDU->getURI(dst, 50, &outLen) == 0){
         QUrl reqUrl(dst);
         for(int i=0; i<resources.count(); i++){
             QUrl resUrl(resources[i]->getUri());
@@ -64,51 +114,31 @@ coap_transaction* coap_server::handleRequest(CoapPDU *recvPDU, QHostAddress addr
             }
         }
     }
+    return res;
+}
 
-    if(res){
-        if(code == CoapPDU::COAP_GET){
-            if(observe == 0){    //Register observer
-                remove_observer_by_uri(res, addr, port);
-                coap_observer* c = new coap_observer(recvPDU, res, addr, port);
-                observers.append(c);
+void coap_server::receiverNotResponding(QHostAddress addr, quint16 port){
+    remove_observer_by_addr(addr, port);
+}
+
+/* Remove all observers, no matter which */
+void coap_server::remove_observer_by_addr(QHostAddress addr, quint16 port){
+    int found;
+
+    do{
+        found = 0;
+        for(int i=0; i<observers.count(); i++){
+            coap_observer* o = observers[i];
+            if(o->getAddr() == addr && o->getPort() == port) {
+                observers.removeAt(i);
+                qDebug() << "Remove " << addr;
+                delete o;
+                found = 1;
+                break;
             }
-            else if(observe == 1){ //De-register observer
-                remove_observer_by_uri(res, addr, port);
-            }
-            res->handleGET(recvPDU, response, &payload);           
         }
-        else if(code == CoapPDU::COAP_POST){
-            res->handlePOST(recvPDU, response);
-        }
-        else if(code == CoapPDU::COAP_PUT){
-            res->handlePUT(recvPDU, response);
-        }
-        else if(code == CoapPDU::COAP_DELETE){
-            res->handleDELETE(recvPDU, response);
-        }
-        else{
+    }while(found);
 
-        }
-    }
-    else{   //Unknown resource
-        if(code == CoapPDU::COAP_GET){
-            handleGET(recvPDU, response, &payload);
-        }
-        else if(code == CoapPDU::COAP_POST){
-            handlePOST(recvPDU, response);
-        }
-        else if(code == CoapPDU::COAP_PUT){
-            handlePUT(recvPDU, response);
-        }
-        else if(code == CoapPDU::COAP_DELETE){
-            handleDELETE(recvPDU, response);
-        }
-        else{
-
-        }
-    }
-
-    return new coap_server_transaction(addr, port, response, this, *&payload);
 }
 
 void coap_server::remove_observer_by_uri(coap_resource* res, QHostAddress addr, quint16 port){
@@ -116,6 +146,7 @@ void coap_server::remove_observer_by_uri(coap_resource* res, QHostAddress addr, 
         coap_observer* o = observers[i];
         if(o->get() == res && o->getAddr() == addr && o->getPort() == port) {
             observers.removeAt(i);
+            delete o;
             break;
         }
     }
@@ -126,9 +157,8 @@ void coap_server::handleObservers(coap_resource* res){
     for(int i=0; i<observers.count(); i++){
         coap_observer* o = observers[i];
         if(o->get() == res){
-            CoapPDU* recvPDU = new CoapPDU();
             CoapPDU* response = new CoapPDU();
-            o->prepare(recvPDU, response);
+            CoapPDU* recvPDU = o->prepare(response);
             QByteArray payload;
             res->handleGET(recvPDU, response, &payload);
             new coap_server_transaction(o->getAddr(), o->getPort(), response, this, *&payload);

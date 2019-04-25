@@ -73,7 +73,18 @@ void coap_engine::receive(QHostAddress addr, QByteArray datagram, quint16 port){
         if(code >= CoapPDU::COAP_GET && code <= CoapPDU::COAP_DELETE){
             /* Request - This message is for the server class */
             if(serverref != nullptr){
-                serverref->handleRequest(recvPDU, addr, port);
+                if(code == CoapPDU::COAP_GET){
+                    serverref->getHandler(recvPDU, addr, port);
+                }
+                else if(code == CoapPDU::COAP_POST){
+                    serverref->postHandler(recvPDU, addr, port);
+                }
+                else if(code == CoapPDU::COAP_PUT){
+                    serverref->putHandler(recvPDU, addr, port);
+                }
+                else if(code == CoapPDU::COAP_DELETE){
+                    serverref->deleteHandler(recvPDU, addr, port);
+                }
             }
         }
         else{

@@ -13,7 +13,7 @@ public:
     suapp(QQmlContext *context);
 
 private:
-    char* command = "Z000000Z\r\n";
+    const char* command = "Z000000Z\r\n";
 
     pulsecounter* s1;
     QTimer* polltimer;

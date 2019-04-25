@@ -61,7 +61,7 @@ void node::requestLinks(){
     pdu->setToken(reinterpret_cast<uint8_t*>(token.data()), static_cast<uint8_t>(token.length()));
 
     enum CoapPDU::ContentFormat ct = CoapPDU::COAP_CONTENT_FORMAT_APP_LINK;
-    pdu->addOption(CoapPDU::COAP_OPTION_CONTENT_FORMAT,1,(uint8_t*)&ct);
+    pdu->addOption(CoapPDU::COAP_OPTION_CONTENT_FORMAT,1,reinterpret_cast<uint8_t*>(&ct));
     pdu->setMessageID(1);
     pdu->setURI(const_cast<char*>(uristring), strlen(uristring));
 
@@ -134,8 +134,8 @@ void node::addSensor(coap_resource* resource){
 QVariant node::request_cfs_format(){
     const char* uristring = uri.toLatin1().data();
     CoapPDU *pdu = new CoapPDU();
-    pdu->setURI((char*)uristring, strlen(uristring));
-    pdu->addURIQuery((char*)"cfsformat");
+    pdu->setURI(const_cast<char*>(uristring), strlen(uristring));
+    pdu->addURIQuery(const_cast<char*>("cfsformat"));
 
     return put_request(pdu, format_filesystem);
 }
@@ -143,8 +143,8 @@ QVariant node::request_cfs_format(){
 QVariant node::request_observe_retry(){
     const char* uristring = uri.toLatin1().data();
     CoapPDU *pdu = new CoapPDU();
-    pdu->setURI((char*)uristring, strlen(uristring));
-    pdu->addURIQuery((char*)"obsretry");
+    pdu->setURI(const_cast<char*>(uristring), strlen(uristring));
+    pdu->addURIQuery(const_cast<char*>("obsretry"));
 
     return put_request(pdu, observe_retry);
 }
@@ -152,8 +152,8 @@ QVariant node::request_observe_retry(){
 QVariant node::request_versions(){
     const char* uristring = uri.toLatin1().data();
     CoapPDU *pdu = new CoapPDU();
-    pdu->setURI((char*)uristring, strlen(uristring));
-    pdu->addURIQuery((char*)"Versions");
+    pdu->setURI(const_cast<char*>(uristring), strlen(uristring));
+    pdu->addURIQuery(const_cast<char*>("Versions"));
 
     return get_request(pdu, req_versions);
 }
@@ -168,7 +168,7 @@ QVariant node::request_SlotNfo(int active){
         return get_request(pdu, req_slotNfoActive);
     }
 
-    pdu->addURIQuery((char*)"SlotNfo=0");
+    pdu->addURIQuery(const_cast<char*>("SlotNfo=0"));
     return get_request(pdu, req_slotNfoBackup);
 }
 
@@ -177,7 +177,7 @@ QVariant node::request_active_slot(){
     CoapPDU *pdu = new CoapPDU();
     pdu->setURI(uristring, strlen(uristring));
 
-    pdu->addURIQuery((char*)"activeSlot");
+    pdu->addURIQuery(const_cast<char*>("activeSlot"));
     return get_request(pdu, req_activeslot);
 }
 
@@ -185,8 +185,8 @@ QVariant node::request_active_slot(){
 QVariant node::request_coapstatus(){
     const char* uristring = uri.toLatin1().data();
     CoapPDU *pdu = new CoapPDU();
-    pdu->setURI((char*)uristring, strlen(uristring));
-    pdu->addURIQuery((char*)"CoapStatus");
+    pdu->setURI(const_cast<char*>(uristring), strlen(uristring));
+    pdu->addURIQuery(const_cast<char*>("CoapStatus"));
 
     return get_request(pdu, req_coapstatus);
 }
@@ -194,8 +194,8 @@ QVariant node::request_coapstatus(){
 QVariant node::request_swreset(){
     const char* uristring = uri.toLatin1().data();
     CoapPDU *pdu = new CoapPDU();
-    pdu->setURI((char*)uristring, strlen(uristring));
-    pdu->addURIQuery((char*)"swreset");
+    pdu->setURI(const_cast<char*>(uristring), strlen(uristring));
+    pdu->addURIQuery(const_cast<char*>("swreset"));
 
     return put_request(pdu, req_swreset);
 }
@@ -221,7 +221,7 @@ QVariant node::swupgrade(QString filename){
     char* uristring = uri.toLatin1().data();
     CoapPDU *pdu = new CoapPDU();
     pdu->setURI(uristring, strlen(uristring));
-    pdu->addURIQuery((char*)"upg");
+    pdu->addURIQuery(const_cast<char*>("upg"));
 
     return put_request(pdu, sw_upgrade, binary, 1);
 }

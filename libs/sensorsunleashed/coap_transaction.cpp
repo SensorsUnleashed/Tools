@@ -6,7 +6,7 @@
 coap_server_transaction::coap_server_transaction(QHostAddress addr, quint16 port, CoapPDU *pdu, coap_server *interface, QByteArray payload) : coap_transaction(addr, port){
     this->pdu = pdu;
     this->tx_payload = payload;
-    this->interface = interface;
+    this->serverif = interface;
 
     prefMsgSize = 32;   //Should be taken from the db
 
@@ -17,7 +17,7 @@ coap_server_transaction::coap_server_transaction(QHostAddress addr, quint16 port
         if(payload.length() > static_cast<int>(prefMsgSize)){  //Payload needs to be split
             uint8_t buf[3];
             uint16_t len;
-            calc_block_option(1, 0, prefMsgSize, &buf[0], &len);
+            coap::calc_block_option(1, 0, prefMsgSize, &buf[0], &len);
             pdu->addOption(CoapPDU::COAP_OPTION_BLOCK2, len, &buf[0]);
             pdu->setPayload(reinterpret_cast<uint8_t*>(payload.data()), static_cast<int>(prefMsgSize));
             tx_next_index = prefMsgSize;
@@ -32,7 +32,7 @@ coap_server_transaction::coap_server_transaction(QHostAddress addr, quint16 port
         }
     }
     //Store contentformat that we are requesting
-    parse_contentformat(pdu, &req_ct);
+    coap::parse_contentformat(pdu, &req_ct);
 
     if(transmit(pdu) == 0){
         /* We dont expect anything in return. */
@@ -68,10 +68,10 @@ int coap_server_transaction::update(CoapPDU *recvPDU){
         uint32_t num;
         uint8_t szx;
         uint32_t prefsize;
-        uint32_t bytesleft = tx_payload.length() - tx_next_index;
+        uint32_t bytesleft = static_cast<uint32_t>(tx_payload.length()) - tx_next_index;
 
         //Sender send us some options to use from now on
-        if(parseBlockOption(options, &more, &num, &szx) == 0){
+        if(coap::parseBlockOption(options, &more, &num, &szx) == 0){
             prefsize = 1 << (szx + 4);
             qDebug() << "Block2: " << num << "/" << more << "/" << prefsize;
         }
@@ -90,7 +90,7 @@ int coap_server_transaction::update(CoapPDU *recvPDU){
             uint8_t* bufptr = &buf[0];
 
             more = bytesleft > prefsize;
-            calc_block_option(more, num, prefsize, bufptr, &len);
+            coap::calc_block_option(more, num, prefsize, bufptr, &len);
 
             txPDU->addOption(CoapPDU::COAP_OPTION_BLOCK2, len, bufptr);
 
@@ -98,12 +98,12 @@ int coap_server_transaction::update(CoapPDU *recvPDU){
             this->num = num;
             //tx_progress(storedPDUdata->tx_next_index, storedPDUdata->tx_payload.length());
             if(more){
-                txPDU->setPayload((uint8_t*)(tx_payload.data()+tx_next_index), prefsize);
+                txPDU->setPayload(reinterpret_cast<uint8_t*>((tx_payload.data()+tx_next_index)), static_cast<int>(prefsize));
                 tx_next_index += prefsize;
 
             }
             else{
-                txPDU->setPayload((uint8_t*)(tx_payload.data()+tx_next_index), bytesleft);
+                txPDU->setPayload(reinterpret_cast<uint8_t*>((tx_payload.data()+tx_next_index)), static_cast<int>(bytesleft));
                 tx_next_index += bytesleft;
             }
 
@@ -145,6 +145,10 @@ int coap_server_transaction::update(CoapPDU *recvPDU){
     return ret;
 }
 
+void coap_server_transaction::notResponding(){
+    serverif->receiverNotResponding(addr, port);
+}
+
 
 coap_client_transaction::coap_client_transaction(QHostAddress addr, quint16 port, CoapPDU *pdu, suinterface* interface, QByteArray payload) : coap_transaction(addr, port){
     this->interface = interface;
@@ -160,7 +164,7 @@ coap_client_transaction::coap_client_transaction(QHostAddress addr, quint16 port
         if(payload.length() > static_cast<int>(prefMsgSize)){  //Payload needs to be split
             uint8_t buf[3];
             uint16_t len;
-            calc_block_option(1, 0, prefMsgSize, &buf[0], &len);
+            coap::calc_block_option(1, 0, prefMsgSize, &buf[0], &len);
             pdu->addOption(CoapPDU::COAP_OPTION_BLOCK1, len, &buf[0]);
             pdu->setPayload(reinterpret_cast<uint8_t*>(payload.data()), static_cast<int>(prefMsgSize));
             tx_next_index = prefMsgSize;
@@ -172,7 +176,7 @@ coap_client_transaction::coap_client_transaction(QHostAddress addr, quint16 port
         }
     }
     //Store contentformat that we are requesting
-    parse_contentformat(pdu, &req_ct);
+    coap::parse_contentformat(pdu, &req_ct);
 
     if(transmit(pdu) == 0){
         /* We dont expect anything in return. */
@@ -217,40 +221,6 @@ void coap_transaction::send_ACK(CoapPDU *recvPDU){
     delete ackPDU;
 }
 
-int coap_transaction::parseBlockOption(CoapPDU::CoapOption* blockoption, uint8_t* more, uint32_t* num, uint8_t* SZX){
-    int len = blockoption->optionValueLength;
-    uint8_t* value = blockoption->optionValuePointer;
-    uint32_t result = 0;
-
-    //To Host byte order
-    for(int i=0; i<len; i++){
-        result <<= 8;
-        result |= *(value+i);
-    }
-    if(len >= 1){
-        *more = (result & 0x8) > 0;
-        *SZX = (result & 0x3);
-        *num = result >> 4;
-        *num |= result >> 4;
-    }
-    else{
-        return 1;
-    }
-    return 0;
-}
-
-int coap_transaction::parse_contentformat(CoapPDU* pdu, enum CoapPDU::ContentFormat* ct){
-    CoapPDU::CoapOption* options = coap::check_option(pdu, CoapPDU::COAP_OPTION_CONTENT_FORMAT);
-    if(options != nullptr){
-        if(options->optionValueLength > 0){
-            *ct = static_cast<enum CoapPDU::ContentFormat>(*options->optionValuePointer);
-            return 0;
-        }
-    }
-
-    return 1;
-}
-
 /* Return 0 if it is done - 1 if it needs more messages */
 int coap_client_transaction::update(CoapPDU *recvPDU){
 
@@ -285,7 +255,7 @@ int coap_client_transaction::update(CoapPDU *recvPDU){
         uint32_t bytesleft = tx_payload.length() - tx_next_index;
 
         //Sender send us some options to use from now on
-        if(parseBlockOption(options, &more, &num, &szx) == 0){
+        if(coap::parseBlockOption(options, &more, &num, &szx) == 0){
             prefsize = 1 << (szx + 4);
             qDebug() << "Block1: " << num << "/" << more << "/" << prefsize;
         }
@@ -304,7 +274,7 @@ int coap_client_transaction::update(CoapPDU *recvPDU){
             uint8_t* bufptr = &buf[0];
 
             more = bytesleft > prefsize;
-            calc_block_option(more, ++num, prefsize, bufptr, &len);
+            coap::calc_block_option(more, ++num, prefsize, bufptr, &len);
 
             txPDU->addOption(CoapPDU::COAP_OPTION_BLOCK1, len, bufptr);
 
@@ -338,7 +308,7 @@ int coap_client_transaction::update(CoapPDU *recvPDU){
         uint8_t more;
         uint32_t num;
         uint8_t szx;
-        if(parseBlockOption(options, &more, &num, &szx) == 0){
+        if(coap::parseBlockOption(options, &more, &num, &szx) == 0){
             uint32_t offset = num << (szx + 4);
 
             qDebug() << "Block2: " << num << "/" << more << "/" << (1 << (szx + 4));
@@ -367,7 +337,7 @@ int coap_client_transaction::update(CoapPDU *recvPDU){
             }
             else{
                 enum CoapPDU::ContentFormat ct;
-                if(parse_contentformat(recvPDU, &ct) == 1){
+                if(coap::parse_contentformat(recvPDU, &ct) == 1){
                     ct = req_ct;
                 }
                 interface->parseMessage(QByteArray::fromRawData(reinterpret_cast<const char*>(recvPDU->getTokenPointer()), recvPDU->getTokenLength()), rx_payload, code, ct);
@@ -388,7 +358,7 @@ int coap_client_transaction::update(CoapPDU *recvPDU){
             }
             //Handle single messages
             enum CoapPDU::ContentFormat ct;
-            if(parse_contentformat(recvPDU, &ct) == 1){
+            if(coap::parse_contentformat(recvPDU, &ct) == 1){
                 ct = req_ct;
             }
             interface->parseMessage(QByteArray::fromRawData(reinterpret_cast<const char*>(recvPDU->getTokenPointer()), recvPDU->getTokenLength()), rx_payload, code, ct);
@@ -439,61 +409,4 @@ int coap_client_transaction::update(CoapPDU *recvPDU){
     }
 
     return ret;
-}
-
-/*************** Helpers ******************/
-#include  <QtEndian>
-int coap_transaction::calc_block_option(uint8_t more, uint32_t num, uint32_t msgsize, uint8_t* blockval, uint16_t* len){
-    /*
-        We store in little, and let cantcoap send it big endian
-        Illustration is in big endian. Network byte order
-           0
-           0 1 2 3 4 5 6 7
-          +-+-+-+-+-+-+-+-+
-          |  NUM  |M| SZX |
-          +-+-+-+-+-+-+-+-+
-
-           0                   1
-           0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5
-          +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-          |          NUM          |M| SZX |
-          +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-
-           0               1                   2
-           0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3
-          +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-          |                   NUM                 |M| SZX |
-          +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-
-    SZX = exponetial 4-10 (16 - 1024 bytes)
-    More = Will further blocks follow this
-    NUM = Current block number (0 is the first)
-*/
-
-    uint32_t result = 0;
-
-    //Calculate the exponential part
-    uint16_t szx = msgsize >> 5;
-
-    result |= num;
-    result <<= 4;
-    result |= szx + (more << 3);
-
-    if (num < 16){
-        *len = 1;
-        *(blockval+0) = result;
-    }
-    else if(num < 4096){
-        *len = 2;
-        *(blockval+0) = result >> 8;
-        *(blockval+1) = result;
-    }
-    else{
-        *len = 3;
-        *(blockval+0) = result >> 16;
-        *(blockval+1) = result >> 8;
-        *(blockval+2) = result >> 0;
-    }
-
-    return 0;
 }

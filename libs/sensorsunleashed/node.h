@@ -104,7 +104,7 @@ public:
     void requestRangeMin();
     void requestRangeMax();
 
-    void requestValue(char* query = nullptr);
+    void requestValue(const char *query = nullptr);
 
     QVariant requestObserve(QString event);
     void abortObserve(QVariant token);

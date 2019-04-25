@@ -8,6 +8,10 @@
 //./CoAPCmdline -m get coap://[fd00::212:4b00:5af:82b7]/su/powerrelay
 //./CoAPCmdline -m put coap://[fd00::212:4b00:5af:82b7]/su/powerrelay?setCommand=2
 //./CoAPCmdline -m get coap://[fd00::212:4b00:5af:82b7]/.well-known/core
+//./CoAPCmdline -m get coap://[::1]/.well-known/core
+
+//QTCreator command line
+//-m put coap://[fd00::212:4b00:5af:82b7]/su/powerrelay?setCommand=2
 int main(int argc, char *argv[])
 {
     QCoreApplication a(argc, argv);
@@ -21,8 +25,12 @@ int main(int argc, char *argv[])
                                  QCoreApplication::translate(
                                      "main", "Destination coap://[::1]:9543 for localhost port 9543"));
 
-    QCommandLineOption methodOption(QStringList() << "m" << "method", "The request method for action", "get|put|post|delete");
+    QCommandLineOption methodOption(QStringList() << "m" << "method",
+                                    "The request method for action", "get|put|post|delete");
+    QCommandLineOption obsOption({"s", "Observe"}, "Subscribe to / observe the resource specified by URI for the given duration in seconds. ");
+
     parser.addOption(methodOption);
+    parser.addOption(obsOption);
 
 
     // A boolean option with a single name (-p)
@@ -89,6 +97,11 @@ int main(int argc, char *argv[])
     else{
         qDebug() << "Unknown method";
         exit(-2);
+    }
+
+    if(parser.isSet(obsOption)){
+        uint8_t obs = 0;
+        pdu->addOption(CoapPDU::COAP_OPTION_OBSERVE, 1, &obs);
     }
 
     enum CoapPDU::ContentFormat ct = CoapPDU::COAP_CONTENT_FORMAT_APP_OCTET;

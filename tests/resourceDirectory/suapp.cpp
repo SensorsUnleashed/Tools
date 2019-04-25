@@ -52,6 +52,7 @@ void suapp::sensorValueChanged(){
 
     coap_resource* r = observees[v];
     qDebug() << "sensorValueChanged:: " << r->getUri() << ": " << v->toString();
+    server->handleObservers(r);
 }
 
 #include <QUrl>

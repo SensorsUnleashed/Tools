@@ -18,11 +18,17 @@ public:
     int transmit(CoapPDU *pdu);
     void done();
 
-private:
+protected:
     QHostAddress addr;
     quint16 port;
+
+    virtual void notResponding() { }
+
+private:
+
     int ackTimeout;
     int8_t retransmissions;
+    int8_t retransmission_count;
     QTimer* acktimer;
     CoapPDU *pdu;
 
@@ -53,13 +59,7 @@ protected:
     uint32_t tx_next_index; //What should be send next
     uint32_t num;
     enum CoapPDU::ContentFormat req_ct = CoapPDU::COAP_CONTENT_FORMAT_TEXT_PLAIN;
-
-    int calc_block_option(uint8_t more, uint32_t num, uint32_t msgsize, uint8_t* blockval, uint16_t* len);
-    int parse_contentformat(CoapPDU* pdu, enum CoapPDU::ContentFormat* ct);
-    int parseBlockOption(CoapPDU::CoapOption* blockoption, uint8_t* more, uint32_t* num, uint8_t* SZX);
     void send_ACK(CoapPDU *recvPDU);
-private:
-    QHostAddress addr;
 
 private slots:
 
@@ -82,8 +82,11 @@ public:
 
     int update(CoapPDU *recvPDU);
 
+protected:
+    void notResponding();
+
 private:
-    coap_server* interface;
+    coap_server* serverif;
 };
 
 

@@ -16,5 +16,6 @@ void suapp::eventSetupRdy(){
 }
 
 void suapp::valueUpdate(quint16 token, QVariant result){
+    Q_UNUSED(token);
     qDebug() << result;
 }

@@ -20,7 +20,7 @@ protected:
 private:
     rdServer* parent;
 
-    void handleGET(CoapPDU *request, CoapPDU *response, QByteArray* payload);
+    void handleGET(CoapPDU *request, CoapPDU *response, QByteArray *payload);
 };
 
 class rdServer : public QObject, coap_resource

@@ -104,7 +104,7 @@ QVariant sensor::getConfigValues(){
     return list;
 }
 
-void sensor::requestValue(char *query){
+void sensor::requestValue(const char *query){
     QByteArray uristring = resource->getUri();
     CoapPDU *pdu = new CoapPDU();
     pdu->setURI(uristring.data(), static_cast<size_t>(uristring.length()));
@@ -129,6 +129,7 @@ QVariant sensor::requestObserve(QString event){
 }
 
 void sensor::abortObserve(QVariant token){
+    Q_UNUSED(token);
     /*
         Removing a token, will render the next
         pdu as unknown and retransmit a RST command
@@ -251,9 +252,9 @@ QByteArray sensor::removeItems(QByteArray arr){
     cmp_ctx_t cmp;
     cmp_init(&cmp, payload.data(), buf_reader, buf_writer);
 
-    cmp_write_array(&cmp, arr.size());
+    cmp_write_array(&cmp, static_cast<uint32_t>(arr.size()));
     for(uint8_t i=0; i<arr.size(); i++){
-        cmp_write_u8(&cmp, arr[i]);
+        cmp_write_u8(&cmp, static_cast<uint8_t>(arr[i]));
     }
     payload.resize(static_cast<int>(static_cast<uint8_t*>(cmp.buf) - reinterpret_cast<uint8_t*>(payload.data())));
     return put_request(pdu, req_removepairingitems, payload);
@@ -307,9 +308,9 @@ QVariant sensor::pair(QVariant pairdata){
         pairaddrarr.append(static_cast<char>(0));
         pairaddrarr.append(static_cast<char>(1));
 
-        cmp_write_array(&cmp, pairaddrarr.length());
+        cmp_write_array(&cmp, static_cast<uint32_t>(pairaddrarr.length()));
         for(int i=0; i<pairaddrarr.length(); i +=2){
-            cmp_write_u16(&cmp, ((uint8_t)(pairaddrarr[i+1]) << 8) + (uint8_t)pairaddrarr[i]);
+            cmp_write_u16(&cmp, (static_cast<uint8_t>((pairaddrarr[i+1]) << 8)) + static_cast<uint8_t>(pairaddrarr[i]));
         }
     }
     else if(parent->getAddress().isInSubnet(pairaddr, pl)){ //Send all but the prefix
@@ -325,10 +326,10 @@ QVariant sensor::pair(QVariant pairdata){
         QByteArray pairaddrarr;
         for(int i=0; i<16; i++){
             if(pl == 0){
-                pairaddrarr.append(addr[i]);
+                pairaddrarr.append(static_cast<char>(addr[i]));
             }
             else if(pl < 8){
-                pairaddrarr.append(addr[i] & (0xFF << pl));
+                pairaddrarr.append(static_cast<char>(addr[i] & (0xFF << pl)));
                 pl = 0;
             }
             else{
@@ -338,20 +339,20 @@ QVariant sensor::pair(QVariant pairdata){
         //Add a 0 byte to the front of the array, so that we
         //can transmit it as a 16bit array. It lowers the total
         //byte count
-        if(pairaddrarr.length() % 2 != 0) pairaddrarr.prepend((char)0);
-        cmp_write_array(&cmp, pairaddrarr.length());
+        if(pairaddrarr.length() % 2 != 0) pairaddrarr.prepend(static_cast<char>(0));
+        cmp_write_array(&cmp, static_cast<uint32_t>(pairaddrarr.length()));
         for(int i=0; i<pairaddrarr.length(); i +=2){
-            cmp_write_u16(&cmp, ((uint8_t)(pairaddrarr[i+1]) << 8) + (uint8_t)pairaddrarr[i]);
+            cmp_write_u16(&cmp, (static_cast<uint8_t>((pairaddrarr[i+1]) << 8)) + static_cast<uint8_t>(pairaddrarr[i]));
         }
     }
     else{
         cmp_write_array(&cmp, 16);
         for(int i=0; i<16; i += 2){
-            cmp_write_u16(&cmp, (addr[i+1] << 8) + addr[i]);
+            cmp_write_u16(&cmp, static_cast<uint16_t>((addr[i+1] << 8) + addr[i]));
         }
     }
 
-    cmp_write_str(&cmp, pairurlstr.data(), pairurlstr.length());
+    cmp_write_str(&cmp, pairurlstr.data(), static_cast<uint32_t>(pairurlstr.length()));
 
     //Add the event triggers
     cmp_write_array(&cmp, 3);
