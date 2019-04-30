@@ -1,6 +1,6 @@
 #include "node.h"
 #include <QRandomGenerator>
-
+#include "su_message.h"
 #include "coap_engine.h"
 
 suinterface::suinterface(QHostAddress addr, quint16 port){

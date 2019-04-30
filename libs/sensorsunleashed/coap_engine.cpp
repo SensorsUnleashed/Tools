@@ -64,6 +64,7 @@ void coap_engine::receive(QHostAddress addr, QByteArray datagram, quint16 port){
                     delete transactionList[i];
                     transactionList.remove(i);
                 }
+                delete recvPDU;
                 return;
             }
         }
@@ -87,11 +88,12 @@ void coap_engine::receive(QHostAddress addr, QByteArray datagram, quint16 port){
                 }
             }
         }
-        else{
-            return;
-        }
+//        else{
+//            delete recvPDU;
+//        }
     }
-    else{
-        delete recvPDU;
-    }
+//    else{
+//        delete recvPDU;
+//    }
+    delete recvPDU;
 }

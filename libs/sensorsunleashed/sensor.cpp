@@ -30,7 +30,7 @@
  * This file is part of the Sensors Unleashed project
  *******************************************************************************/
 #include "node.h"
-//#include "helper.h"
+#include "su_message.h"
 
 int encode(char* buffer, cmp_object_t objTemplate, QVariant value);
 static uint32_t buf_writer(cmp_ctx_t* ctx, const void *data, uint32_t count);
@@ -111,7 +111,7 @@ void sensor::requestValue(const char *query){
     if(query){
         pdu->addURIQuery(query);
     }
-    get_request(pdu, req_currentValue);
+    get_request(pdu, su_message::req_currentValue);
 }
 
 QVariant sensor::requestObserve(QString event){
@@ -125,7 +125,7 @@ QVariant sensor::requestObserve(QString event){
     pdu->setURI(uristring, strlen(uristring));
     pdu->addOption(CoapPDU::COAP_OPTION_OBSERVE, 1, &id);
 
-    return get_request(pdu, req_observe);
+    return get_request(pdu, su_message::req_observe);
 }
 
 void sensor::abortObserve(QVariant token){
@@ -143,7 +143,7 @@ void sensor::requestAboveEventLvl(){
     CoapPDU *pdu = new CoapPDU();
     pdu->setURI(uristring.data(), static_cast<size_t>(uristring.length()));
     pdu->addURIQuery("AboveEventAt");
-    get_request(pdu, req_aboveEventValue);
+    get_request(pdu, su_message::req_aboveEventValue);
 }
 
 void sensor::requestBelowEventLvl(){   
@@ -151,7 +151,7 @@ void sensor::requestBelowEventLvl(){
     CoapPDU *pdu = new CoapPDU();
     pdu->setURI(uristring.data(), static_cast<size_t>(uristring.length()));
     pdu->addURIQuery("BelowEventAt");
-    get_request(pdu, req_belowEventValue);
+    get_request(pdu, su_message::req_belowEventValue);
 }
 
 void sensor::requestChangeEventLvl(){   
@@ -159,7 +159,7 @@ void sensor::requestChangeEventLvl(){
     CoapPDU *pdu = new CoapPDU();
     pdu->setURI(uristring.data(), static_cast<size_t>(uristring.length()));
     pdu->addURIQuery("ChangeEventAt");
-    get_request(pdu, req_changeEventAt);
+    get_request(pdu, su_message::req_changeEventAt);
 }
 
 void sensor::requestRangeMin(){
@@ -167,7 +167,7 @@ void sensor::requestRangeMin(){
     CoapPDU *pdu = new CoapPDU();
     pdu->setURI(uristring.data(), static_cast<size_t>(uristring.length()));
     pdu->addURIQuery("RangeMin");
-    get_request(pdu, req_RangeMinValue);
+    get_request(pdu, su_message::req_RangeMinValue);
 }
 
 void sensor::requestRangeMax(){
@@ -175,7 +175,7 @@ void sensor::requestRangeMax(){
     CoapPDU *pdu = new CoapPDU();
     pdu->setURI(uristring.data(), static_cast<size_t>(uristring.length()));
     pdu->addURIQuery("RangeMax");
-    get_request(pdu, req_RangeMaxValue);
+    get_request(pdu, su_message::req_RangeMaxValue);
 }
 
 void sensor::req_eventSetup(){
@@ -183,7 +183,7 @@ void sensor::req_eventSetup(){
     CoapPDU *pdu = new CoapPDU();
     pdu->setURI(uristring.data(), static_cast<size_t>(uristring.length()));
     pdu->addURIQuery("getEventSetup");
-    get_request(pdu, req_getEventSetup);
+    get_request(pdu, su_message::req_getEventSetup);
 }
 
 void sensor::updateConfig(QVariant updatevalues){
@@ -213,7 +213,7 @@ void sensor::updateConfig(QVariant updatevalues){
     pdu->setURI(uristring.data(), static_cast<size_t>(uristring.length()));
     pdu->addURIQuery("eventsetup");
 
-    put_request(pdu, req_updateEventsetup, payload);
+    put_request(pdu, su_message::req_updateEventsetup, payload);
 }
 
 void sensor::flashSave(){
@@ -221,7 +221,7 @@ void sensor::flashSave(){
     CoapPDU *pdu = new CoapPDU();
     pdu->setURI(uristring.data(), static_cast<size_t>(uristring.length()));
     pdu->addURIQuery("saveSetup");
-    get_request(pdu, req_saveSetup);
+    get_request(pdu, su_message::req_saveSetup);
 }
 
 void sensor::getpairingslist(){
@@ -229,7 +229,7 @@ void sensor::getpairingslist(){
     CoapPDU *pdu = new CoapPDU();
     pdu->setURI(uristring.data(), static_cast<size_t>(uristring.length()));
     pdu->addURIQuery("pairings");
-    get_request(pdu, req_pairingslist);
+    get_request(pdu, su_message::req_pairingslist);
 }
 
 QVariant sensor::clearpairingslist(){
@@ -237,7 +237,7 @@ QVariant sensor::clearpairingslist(){
     CoapPDU *pdu = new CoapPDU();
     pdu->setURI(uristring.data(), static_cast<size_t>(uristring.length()));
     pdu->addURIQuery("pairRemoveAll");
-    return put_request(pdu, req_clearparings, nullptr);
+    return put_request(pdu, su_message::req_clearparings, nullptr);
 }
 
 QByteArray sensor::removeItems(QByteArray arr){
@@ -257,7 +257,7 @@ QByteArray sensor::removeItems(QByteArray arr){
         cmp_write_u8(&cmp, static_cast<uint8_t>(arr[i]));
     }
     payload.resize(static_cast<int>(static_cast<uint8_t*>(cmp.buf) - reinterpret_cast<uint8_t*>(payload.data())));
-    return put_request(pdu, req_removepairingitems, payload);
+    return put_request(pdu, su_message::req_removepairingitems, payload);
 }
 
 QVariant sensor::pair(QVariant pairdata){
@@ -367,7 +367,7 @@ QVariant sensor::pair(QVariant pairdata){
     pdu->setURI(uristring.data(), static_cast<size_t>(uristring.length()));
     pdu->addURIQuery("join");
 
-    return put_request(pdu, req_pairsensor, payload);
+    return put_request(pdu, su_message::req_pairsensor, payload);
 }
 
 void sensor::testEvents(QVariant event, QVariant value){
@@ -398,31 +398,31 @@ void sensor::testEvents(QVariant event, QVariant value){
     pdu->setURI(uristring.data(), static_cast<size_t>(uristring.length()));
     pdu->addURIQuery("postEvent");
 
-    put_request(pdu, req_testevent, payload);
+    put_request(pdu, su_message::req_testevent, payload);
 }
 
 /******** Sensor reply handlers ************/
-void sensor::handleReturnCode(msgid token, CoapPDU::Code code){
-
-    if(token.req == req_clearparings){
+void sensor::handleReturnCode(QByteArray token, CoapPDU::Code code){
+    int req = getTokenref(token);
+    if(req == su_message::req_clearparings){
         if(code == CoapPDU::COAP_CHANGED){
             //pairings->clear();
         }
     }
-    else if(token.req == req_removepairingitems){
+    else if(req == su_message::req_removepairingitems){
         qDebug() << "handleReturnCode req_removepairingitems";
         //pairings->removePairingsAck(token.number);
     }
-    else if(token.req == req_observe){
+    else if(req == su_message::req_observe){
         qDebug() << "handleReturnCode req_observe: " << code;
     }
-    else if(token.req == req_pairsensor){
+    else if(req == su_message::req_pairsensor){
         qDebug() << "handleReturnCode req_pairsensor: " << code;
     }
 }
 
-void sensor::nodeNotResponding(msgid token){
-    qDebug() << "Token " << token.number << " timed out";
+void sensor::nodeNotResponding(QByteArray token){
+    qDebug() << "Token " << token << " timed out";
 }
 
 QVariant sensor::parseAppOctetFormat(QByteArray token, QByteArray payload, CoapPDU::Code code) {
@@ -439,15 +439,15 @@ QVariant sensor::parseAppOctetFormat(QByteArray token, QByteArray payload, CoapP
         QVariantMap result = cmpobjectToVariant(obj, &cmp).toMap();
 
             switch(req){
-            case req_RangeMinValue:
+            case su_message::req_RangeMinValue:
                 nRangeMin->update(obj);
                 emit rangeMinValueReceived(result);
                 break;
-            case req_RangeMaxValue:
+            case su_message::req_RangeMaxValue:
                 nRangeMax->update(obj);
                 emit rangeMaxValueReceived(result);
                 break;
-            case req_observe:
+            case su_message::req_observe:
                 if(code < 128){
                     qDebug() << "Start observing: " << resource->getUri();
                     emit observe_started(result, token);
@@ -458,25 +458,25 @@ QVariant sensor::parseAppOctetFormat(QByteArray token, QByteArray payload, CoapP
                     emit observe_failed(token);
                     break;
                 }
-            [[clang::fallthrough]]; case observe_monitor:
-            [[clang::fallthrough]]; case req_currentValue:
+            [[clang::fallthrough]]; case su_message::observe_monitor:
+            [[clang::fallthrough]]; case su_message::req_currentValue:
                 nLastValue->update(obj);
                 emit currentValueChanged(token, result);
                 valueUpdate(obj);
                 break;
-            case req_aboveEventValue:
+            case su_message::req_aboveEventValue:
                 nAboveEventAt->update(obj);
                 emit aboveEventValueChanged(result);
                 break;
-            case req_belowEventValue:
+            case su_message::req_belowEventValue:
                 nBelowEventAt->update(obj);
                 emit belowEventValueChanged(result);
                 break;
-            case req_changeEventAt:
+            case su_message::req_changeEventAt:
                 nChangeEvent->update(obj);
                 emit changeEventValueChanged(result);
                 break;
-            case req_getEventSetup:
+            case su_message::req_getEventSetup:
                 nAboveEventAt->update(obj);
                 if(!cmp_read_object(&cmp, &obj)) return QVariant(0);
                 nBelowEventAt->update(obj);
@@ -486,11 +486,11 @@ QVariant sensor::parseAppOctetFormat(QByteArray token, QByteArray payload, CoapP
                 neventsActive->update(obj);
                 emit eventSetupRdy();
                 break;
-            case req_updateEventsetup:
+            case su_message::req_updateEventsetup:
                 qDebug() << "req_updateEventsetup";
                 qDebug() << payload;
                 break;
-            case req_pairingslist:
+            case su_message::req_pairingslist:
                 if(obj.type >= CMP_TYPE_BIN8 && obj.type <= CMP_TYPE_BIN32){
                     //First time we get here, clear the old pairingslist
                     //if(cont == 0) pairings->clear();
@@ -501,25 +501,25 @@ QVariant sensor::parseAppOctetFormat(QByteArray token, QByteArray payload, CoapP
                     qDebug() << "req_pairingslist - something in the message was wrong";
                 }
                 break;
-            case req_clearparings:
+            case su_message::req_clearparings:
                 qDebug() << "req_clearparings";
                 break;
-            case req_removepairingitems:
+            case su_message::req_removepairingitems:
                 qDebug() << "req_clearparings";
                 break;
-            case req_pairsensor:
+            case su_message::req_pairsensor:
                 if(obj.type == CMP_TYPE_UINT8){
                     //pairings->appended(token.number, result["value"].toInt());
                 }
                 break;
                 //When we request a state change in the device, it always returns its current value
-            case req_setCommand:
+            case su_message::req_setCommand:
                 nLastValue->update(obj);
                 valueUpdate(obj);
                 emit currentValueChanged(token, result);
                 qDebug() << "req_setCommand";
                 break;
-            case req_testevent:
+            case su_message::req_testevent:
                 break;
             }
     }while(cmp.buf < payload.data() + payload.length() && cont);

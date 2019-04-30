@@ -13,7 +13,7 @@ public:
         this->s = s;
     }
 
-    ~su_resource(){
+    virtual ~su_resource(){
 
     }
 
@@ -31,7 +31,7 @@ private:
     void handleDELETE(CoapPDU *request, CoapPDU *response){ Q_UNUSED(request); Q_UNUSED(response); qDebug() << "Implement handleDELETE";}
 };
 
-class suapp : public QObject
+class suapp : public coap_server
 {
     Q_OBJECT
 public:
@@ -39,7 +39,6 @@ public:
     virtual ~suapp();
 private:
     rdServer* rd;
-    coap_server* server;
     QHash<suValue*, coap_resource*> observees;
 public slots:
     void sensorCreated(sensor* s);

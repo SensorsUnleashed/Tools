@@ -7,7 +7,7 @@
 #include "cantcoap/cantcoap.h"
 #include <coap_resource.h>
 #include <coap_observer.h>
-//#include "coap_transaction.h"
+
 class coap_transaction;
 class coap_server;
 

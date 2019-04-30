@@ -32,6 +32,7 @@
 #include "node.h"
 #include "coap_transaction.h"
 #include <QRandomGenerator>
+#include "su_message.h"
 
 //Created from QML
 node::node(QHostAddress addr, quint16 port) : suinterface(addr, port)
@@ -137,7 +138,7 @@ QVariant node::request_cfs_format(){
     pdu->setURI(const_cast<char*>(uristring), strlen(uristring));
     pdu->addURIQuery(const_cast<char*>("cfsformat"));
 
-    return put_request(pdu, format_filesystem);
+    return put_request(pdu, su_message::format_filesystem);
 }
 
 QVariant node::request_observe_retry(){
@@ -146,7 +147,7 @@ QVariant node::request_observe_retry(){
     pdu->setURI(const_cast<char*>(uristring), strlen(uristring));
     pdu->addURIQuery(const_cast<char*>("obsretry"));
 
-    return put_request(pdu, observe_retry);
+    return put_request(pdu, su_message::observe_retry);
 }
 
 QVariant node::request_versions(){
@@ -155,7 +156,7 @@ QVariant node::request_versions(){
     pdu->setURI(const_cast<char*>(uristring), strlen(uristring));
     pdu->addURIQuery(const_cast<char*>("Versions"));
 
-    return get_request(pdu, req_versions);
+    return get_request(pdu, su_message::req_versions);
 }
 
 QVariant node::request_SlotNfo(int active){
@@ -165,11 +166,11 @@ QVariant node::request_SlotNfo(int active){
 
     if(active){
         pdu->addURIQuery("SlotNfo=1");
-        return get_request(pdu, req_slotNfoActive);
+        return get_request(pdu, su_message::req_slotNfoActive);
     }
 
     pdu->addURIQuery(const_cast<char*>("SlotNfo=0"));
-    return get_request(pdu, req_slotNfoBackup);
+    return get_request(pdu, su_message::req_slotNfoBackup);
 }
 
 QVariant node::request_active_slot(){
@@ -178,7 +179,7 @@ QVariant node::request_active_slot(){
     pdu->setURI(uristring, strlen(uristring));
 
     pdu->addURIQuery(const_cast<char*>("activeSlot"));
-    return get_request(pdu, req_activeslot);
+    return get_request(pdu, su_message::req_activeslot);
 }
 
 
@@ -188,7 +189,7 @@ QVariant node::request_coapstatus(){
     pdu->setURI(const_cast<char*>(uristring), strlen(uristring));
     pdu->addURIQuery(const_cast<char*>("CoapStatus"));
 
-    return get_request(pdu, req_coapstatus);
+    return get_request(pdu, su_message::req_coapstatus);
 }
 
 QVariant node::request_swreset(){
@@ -197,7 +198,7 @@ QVariant node::request_swreset(){
     pdu->setURI(const_cast<char*>(uristring), strlen(uristring));
     pdu->addURIQuery(const_cast<char*>("swreset"));
 
-    return put_request(pdu, req_swreset);
+    return put_request(pdu, su_message::req_swreset);
 }
 
 #include <QFile>
@@ -223,11 +224,11 @@ QVariant node::swupgrade(QString filename){
     pdu->setURI(uristring, strlen(uristring));
     pdu->addURIQuery(const_cast<char*>("upg"));
 
-    return put_request(pdu, sw_upgrade, binary, 1);
+    return put_request(pdu, su_message::sw_upgrade, binary, 1);
 }
 
 
-void node::handleReturnCode(msgid token, CoapPDU::Code code){
+void node::handleReturnCode(QByteArray token, CoapPDU::Code code){
     Q_UNUSED(token);
     Q_UNUSED(code);
     qDebug() << "Got token again";
@@ -244,13 +245,13 @@ QVariant addDateTime(uint32_t epoch){
     return dt;
 }
 
-void node::nodeNotResponding(msgid token){
-    qDebug() << "Node: " << getAddressStr() << " token: " << token.number;
+void node::nodeNotResponding(QByteArray token){
+    qDebug() << "Node: " << getAddressStr() << " token: " << token;
     setCommStatus(NOTOK);
 }
 
-void node::nodeResponding(msgid token){
-    qDebug() << "Node: " << getAddressStr() << " token: " << token.number;
+void node::nodeResponding(QByteArray token){
+    qDebug() << "Node: " << getAddressStr() << " token: " << token;
     setCommStatus(OK);
 }
 
@@ -274,21 +275,21 @@ QVariant node::parseAppOctetFormat(QByteArray token, QByteArray payload, CoapPDU
     int req = getTokenref(token);
 
     switch(req){
-    case req_versions:
+    case su_message::req_versions:
         emit requst_received("req_versions", res);
         break;
-    case req_coapstatus:
+    case su_message::req_coapstatus:
         emit requst_received("req_coapstatus", res);
         break;
-    case req_slotNfoActive:
+    case su_message::req_slotNfoActive:
         res.append(addDateTime(res[2].toMap()["value"].toULongLong()));
         emit requst_received("req_slotNfoActive", res);
         break;
-    case req_slotNfoBackup:
+    case su_message::req_slotNfoBackup:
         res.append(addDateTime(res[2].toMap()["value"].toULongLong()));
         emit requst_received("req_slotNfoBackup", res);
         break;
-    case req_activeslot:
+    case su_message::req_activeslot:
         emit requst_received("req_activeslot", res);
         break;
     default:

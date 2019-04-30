@@ -3,26 +3,26 @@
 
 suapp::suapp()
 {
-    server = new coap_server();
+    //server = new coap_server();
 
     node* n1 = new node(QHostAddress("fd00::212:4b00:3d0:a448"));
     node* n2 = new node(QHostAddress("fd00::212:4b00:5af:82b7"));
 
     sensor* s1 = new sensor("fd00::212:4b00:5af:82b7", "dev/test");
     su_resource* r = new su_resource(s1);
-    server->addResource(r);
+    addResource(r);
 
     sensor* s2 = new sensor("fd00::212:4b00:5af:82b7", "dev/test2");
     su_resource* r2 = new su_resource(s2);
-    server->addResource(r2);
+    addResource(r2);
 
     sensor* s3 = new sensor("fd00::212:4b00:5af:82b7", "dev/test3");
     su_resource* r3 = new su_resource(s3);
-    server->addResource(r3);
+    addResource(r3);
 
     sensor* s4 = new sensor("fd00::212:4b00:5af:82b7", "dev/test4");
     su_resource* r4 = new su_resource(s4);
-    server->addResource(r4);
+    addResource(r4);
 
     n1->requestLinks();
     n2->requestLinks();
@@ -37,8 +37,8 @@ suapp::~suapp(){
 
 void suapp::sensorCreated(sensor* s){
     su_resource* r = new su_resource(s);
-    server->addResource(r);
-    //s->requestValue();
+    addResource(r);
+
     suValue* v = s->getnLastValue();
     if(v != nullptr){
         s->requestObserve("change");
@@ -52,7 +52,7 @@ void suapp::sensorValueChanged(){
 
     coap_resource* r = observees[v];
     qDebug() << "sensorValueChanged:: " << r->getUri() << ": " << v->toString();
-    server->handleObservers(r);
+    handleObservers(r);
 }
 
 #include <QUrl>

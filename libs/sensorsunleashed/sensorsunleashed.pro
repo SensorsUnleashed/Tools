@@ -34,7 +34,6 @@ SOURCES += \
         cmp.c \
         crc16.c \
         suinterface.cpp \
-        su_message.cpp \
     coap_server.cpp \
     coap_transaction.cpp \
     coap_engine.cpp \
@@ -42,7 +41,8 @@ SOURCES += \
     coap_resource.cpp \
     messagepack.cpp \
     coap.cpp \
-    coap_observer.cpp
+    coap_observer.cpp \
+    coap_blocktransfer.cpp
 
 #    messagepack/cmp.c \
 
@@ -60,11 +60,11 @@ HEADERS += \
     coap_server.h \
     coap_transaction.h \
     coap_engine.h \
-    wsn.h \
     coap_resource.h \
     messagepack.h \
     coap.h \
-    coap_observer.h
+    coap_observer.h \
+    coap_blocktransfer.h
     #messagepack/cmp.h \
 
 unix {

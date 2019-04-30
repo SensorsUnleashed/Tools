@@ -47,7 +47,7 @@ coap_transaction* coap_server::getHandler(CoapPDU *recvPDU, QHostAddress addr, q
 
     response->setCode(code);
     response->setToken(recvPDU->getTokenPointer(), static_cast<uint8_t>(recvPDU->getTokenLength()));
-    response->setType(recvPDU->getType());
+    response->setType(CoapPDU::COAP_ACKNOWLEDGEMENT);
     response->setMessageID(recvPDU->getMessageID()+1);
 
     coap_resource* res = findResource(recvPDU);
@@ -65,7 +65,6 @@ coap_transaction* coap_server::getHandler(CoapPDU *recvPDU, QHostAddress addr, q
     }
     else{   //Unknown resource
     }
-    delete recvPDU;
     return new coap_server_transaction(addr, port, response, this, *&payload);
 }
 
@@ -76,7 +75,6 @@ coap_transaction* coap_server::postHandler(CoapPDU *recvPDU, QHostAddress addr, 
     if(res){
         res->handlePOST(recvPDU, response);
     }
-    delete recvPDU;
     return new coap_server_transaction(addr, port, response, this, *&payload);
 }
 coap_transaction* coap_server::putHandler(CoapPDU *recvPDU, QHostAddress addr, quint16 port){
@@ -86,7 +84,6 @@ coap_transaction* coap_server::putHandler(CoapPDU *recvPDU, QHostAddress addr, q
     if(res){
         res->handlePUT(recvPDU, response);
     }
-    delete recvPDU;
     return new coap_server_transaction(addr, port, response, this, *&payload);
 }
 coap_transaction* coap_server::deleteHandler(CoapPDU *recvPDU, QHostAddress addr, quint16 port){
@@ -96,7 +93,6 @@ coap_transaction* coap_server::deleteHandler(CoapPDU *recvPDU, QHostAddress addr
     if(res){
         res->handleDELETE(recvPDU, response);
     }
-    delete recvPDU;
     return new coap_server_transaction(addr, port, response, this, *&payload);
 }
 

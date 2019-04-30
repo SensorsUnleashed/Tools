@@ -4,6 +4,8 @@
 #include "cantcoap/cantcoap.h"
 
 namespace coap {
+    const uint32_t prefMsgSize = 32;
+
     CoapPDU::CoapOption* check_option(CoapPDU *pdu, enum CoapPDU::Option opt);
     int parseBlockOption(CoapPDU::CoapOption* blockoption, uint8_t* more, uint32_t* num, uint8_t* SZX);
     int parse_contentformat(CoapPDU* pdu, enum CoapPDU::ContentFormat* ct);

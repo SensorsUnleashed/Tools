@@ -12,6 +12,8 @@
 
 //QTCreator command line
 //-m put coap://[fd00::212:4b00:5af:82b7]/su/powerrelay?setCommand=2
+//coap://[::1]/fd00::212:4b00:3d0:a448/su/pulsecounter -m get -s
+//-m get coap://[::1]/fd00::212:4b00:5af:82b7/dev/test
 int main(int argc, char *argv[])
 {
     QCoreApplication a(argc, argv);

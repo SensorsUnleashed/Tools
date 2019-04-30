@@ -38,7 +38,6 @@
 
 #include <QHostAddress>
 #include "cmp_helpers.h"
-#include "wsn.h"
 #include <QDateTime>
 #include <coap_resource.h>
 #include <messagepack.h>
@@ -47,7 +46,7 @@ class pairlist;
 class sensorstore;
 class node;
 
-int findToken(uint16_t token, QVector<msgid> tokenlist);
+//int findToken(uint16_t token, QVector<msgid> tokenlist);
 QVariant cmpobjectToVariant(cmp_object_t obj, cmp_ctx_t *cmp = nullptr);
 bool buf_reader(cmp_ctx_t *ctx, void *data, uint32_t limit);
 
@@ -125,8 +124,8 @@ public:
 
     void testEvents(QVariant event, QVariant value);
 
-    void handleReturnCode(msgid token, CoapPDU::Code code);
-    void nodeNotResponding(msgid token);
+    void handleReturnCode(QByteArray token, CoapPDU::Code code);
+    void nodeNotResponding(QByteArray token);
     QVariant parseAppOctetFormat(QByteArray token, QByteArray payload, CoapPDU::Code code);
 
     virtual QVariant getClassType(){ return "DefaultSensor.qml"; }
@@ -135,43 +134,26 @@ public:
     virtual void valueUpdate(cmp_object_t) {}
     virtual int8_t getValueType(){ return CMP_TYPE_UINT8; }
 
-    //cmp_object_t getLastValue(){ return LastValue; }
-    //cmp_object_t getMaxLimit(){ return RangeMax; }
-    //cmp_object_t getMinLimit(){ return RangeMin; }
-
     suValue* getnLastValue(){ return nLastValue; }
     suValue* getMaxLimit(){ return nRangeMax; }
     suValue* getMinLimit(){ return nRangeMin; }
 
 protected:
 
-    //uint16_t put_request(CoapPDU *pdu, enum request req, QByteArray payload);
-
-    suValue* neventsActive;		//All events on or Off
-    suValue* nLastValue;
-    suValue* nAboveEventAt;	//When resource crosses this line from low to high give an event (>=)
-    suValue* nBelowEventAt;	//When resource crosses this line from high to low give an event (<=)
-    suValue* nChangeEvent;	//When value has changed more than changeEvent + lastevent value <>= value
-    suValue* nRangeMin;		//What is the minimum value this device can read
-    suValue* nRangeMax;		//What is the maximum value this device can read
-
-
-//    cmp_object_t eventsActive;		//All events on or Off
-//    cmp_object_t LastValue;
-//    cmp_object_t AboveEventAt;	//When resource crosses this line from low to high give an event (>=)
-//    cmp_object_t BelowEventAt;	//When resource crosses this line from high to low give an event (<=)
-//    cmp_object_t ChangeEvent;	//When value has changed more than changeEvent + lastevent value <>= value
-//    cmp_object_t RangeMin;		//What is the minimum value this device can read
-//    cmp_object_t RangeMax;		//What is the maximum value this device can read
+    suValue* neventsActive = nullptr;		//All events on or Off
+    suValue* nLastValue = nullptr;
+    suValue* nAboveEventAt = nullptr;	//When resource crosses this line from low to high give an event (>=)
+    suValue* nBelowEventAt = nullptr;	//When resource crosses this line from high to low give an event (<=)
+    suValue* nChangeEvent = nullptr;	//When value has changed more than changeEvent + lastevent value <>= value
+    suValue* nRangeMin = nullptr;	//What is the minimum value this device can read
+    suValue* nRangeMax = nullptr;	//What is the maximum value this device can read
 
 private:
     node* parent;
     QVariantMap sensorinfo;
-    //    QVector<msgid> token;
     pairlist* pairings;
     uint8_t init;   //Flag to indicate if sensor config has been requested or not
     coap_resource* resource;
-    //uint16_t get_request(CoapPDU *pdu, enum request req, QByteArray payload=0);
 
 signals:
     void currentValueChanged(QByteArray token, QVariant result);
@@ -226,13 +208,10 @@ public:
     QVariant getClassType(){ return "DefaultDevice.qml"; }
     int8_t getValueType(){ return CMP_TYPE_UINT16; }
 
-    //uint16_t getLastValue(){ return LastValue.as.u16; }
 protected:
 
 
 };
-
-
 
 class SENSORSUNLEASHEDSHARED_EXPORT node : public suinterface
 {
@@ -264,9 +243,9 @@ public:
     Q_INVOKABLE QVariant request_swreset();
     Q_INVOKABLE QVariant swupgrade(QString filename);
 
-    void handleReturnCode(msgid token, CoapPDU::Code code);
-    void nodeNotResponding(msgid token);
-    void nodeResponding(msgid token);
+    void handleReturnCode(QByteArray token, CoapPDU::Code code);
+    void nodeNotResponding(QByteArray token);
+    void nodeResponding(QByteArray token);
 
     QVariant parseAppOctetFormat(QByteArray token, QByteArray payload, CoapPDU::Code code);
 

@@ -1,11 +1,11 @@
 #ifndef COAP_TRANSACTION_H
 #define COAP_TRANSACTION_H
 #include <QObject>
-
+#include <QTimer>
 #include "cantcoap/cantcoap.h"
 #include <node.h>
 #include "coap_server.h"
-#include "su_message.h"
+#include "coap_blocktransfer.h"
 
 class coap_transmit : public QObject
 {
@@ -15,13 +15,15 @@ public:
     coap_transmit(QHostAddress addr, quint16 port);
     ~coap_transmit();
 
-    int transmit(CoapPDU *pdu);
+    int transmitHandler(CoapPDU *pdu);
+    void transmitOnly(CoapPDU* pdu);
     void done();
 
 protected:
     QHostAddress addr;
     quint16 port;
 
+    void resetTimeout();
     virtual void notResponding() { }
 
 private:
@@ -30,11 +32,13 @@ private:
     int8_t retransmissions;
     int8_t retransmission_count;
     QTimer* acktimer;
+    QTimer* cleanuptimer;
     CoapPDU *pdu;
 
 
 private slots:
     void timeout();
+    void cleanupTimeout();
 
 signals:
     void tx_timeout();
@@ -47,19 +51,16 @@ class coap_transaction : public coap_transmit
 public:
     coap_transaction(QHostAddress addr, quint16 port);
     int checkPDU(QHostAddress addr, CoapPDU *pdu);
+    void sendACK(CoapPDU* recvPDU);
 
     virtual int update(CoapPDU *recvPDU){ Q_UNUSED(recvPDU); qDebug() << "coap_transaction::update Implement this!"; return 0;}
 
 protected:
+    QByteArray uri;
+
     suinterface* interface = nullptr;
     CoapPDU *pdu;
-    QByteArray tx_payload;
-    QByteArray rx_payload;
-    uint32_t prefMsgSize;
-    uint32_t tx_next_index; //What should be send next
-    uint32_t num;
     enum CoapPDU::ContentFormat req_ct = CoapPDU::COAP_CONTENT_FORMAT_TEXT_PLAIN;
-    void send_ACK(CoapPDU *recvPDU);
 
 private slots:
 
@@ -72,6 +73,10 @@ public:
     coap_client_transaction(QHostAddress addr, quint16 port, CoapPDU *pdu, suinterface* interface = nullptr, QByteArray payload=nullptr);
 
     int update(CoapPDU *recvPDU);
+
+protected:
+    coap_blocktransfer* block1 = nullptr;
+    coap_blockrx* block2 = nullptr;
 };
 
 class coap_server_transaction : public coap_transaction
@@ -84,6 +89,8 @@ public:
 
 protected:
     void notResponding();
+
+    coap_blocktransfer* block2 = nullptr;
 
 private:
     coap_server* serverif;

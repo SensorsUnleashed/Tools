@@ -4,6 +4,7 @@
 #include <QHash>
 #include <node.h>
 #include <QQmlContext>
+#include <QTimer>
 #include "woody.h"
 
 class suapp : public QObject
