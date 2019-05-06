@@ -7,13 +7,6 @@ coap_server_transaction::coap_server_transaction(QHostAddress addr, quint16 port
     this->pdu = pdu;
     this->serverif = interface;
 
-    uri.resize(200);
-    int urilen;
-    pdu->getURI(uri.data(), 200, &urilen);
-    uri.resize(urilen);
-
-    qDebug() << "Server: Ready to send to " << addr.toString();
-
     /*Add the payload if there is any */
     if(!payload.isEmpty()){
         if(payload.length() > static_cast<int>(coap::prefMsgSize)){  //Payload needs to be split
@@ -72,7 +65,7 @@ int coap_server_transaction::update(CoapPDU *recvPDU){
         options = coap::check_option(pdu, CoapPDU::COAP_OPTION_CONTENT_FORMAT);
         if(options){
             if(options->optionValueLength > 0){
-                txPDU->setContentFormat((enum CoapPDU::ContentFormat)*options->optionValuePointer);
+                txPDU->setContentFormat(static_cast<enum CoapPDU::ContentFormat>(*options->optionValuePointer));
             }
         }
 
@@ -80,7 +73,6 @@ int coap_server_transaction::update(CoapPDU *recvPDU){
         txPDU->setToken(pdu->getTokenPointer(), static_cast<uint8_t>(pdu->getTokenLength()));
         txPDU->setType(CoapPDU::COAP_ACKNOWLEDGEMENT);
         txPDU->setCode(pdu->getCode());
-        txPDU->setURI(uri.data(), static_cast<size_t>(uri.length()));
 
         //Switch out the old pdu with the new
         delete pdu;
@@ -104,8 +96,6 @@ coap_client_transaction::coap_client_transaction(QHostAddress addr, quint16 port
     int urilen;
     pdu->getURI(uri.data(), 200, &urilen);
     uri.resize(urilen);
-
-    qDebug() << "Ready to send to " << addr.toString();
 
     /*Add the payload if there is any */
     if(!payload.isEmpty()){
@@ -143,7 +133,7 @@ int coap_transaction::checkPDU(QHostAddress addr, CoapPDU *pdu){
     if(pdu->getTokenLength() != this->pdu->getTokenLength()){
         return 2;
     }
-    if(strncmp((const char*)pdu->getTokenPointer(), (const char*) this->pdu->getTokenPointer(), this->pdu->getTokenLength() != 0))
+    if(strncmp(reinterpret_cast<const char*>(pdu->getTokenPointer()), reinterpret_cast<const char*>(this->pdu->getTokenPointer()), static_cast<size_t>(this->pdu->getTokenLength())) != 0)
         return 3;
     return 0;
 }
@@ -151,9 +141,9 @@ int coap_transaction::checkPDU(QHostAddress addr, CoapPDU *pdu){
 void coap_transaction::sendACK(CoapPDU* recvPDU){
     CoapPDU *ackPDU = new CoapPDU();
 
-    ackPDU->setURI(uri.data(), static_cast<size_t>(uri.length()));
+    //ackPDU->setURI(uri.data(), static_cast<size_t>(uri.length()));
     ackPDU->setMessageID(recvPDU->getMessageID());
-    ackPDU->setToken(recvPDU->getTokenPointer(), recvPDU->getTokenLength());
+    ackPDU->setToken(recvPDU->getTokenPointer(), static_cast<uint8_t>(recvPDU->getTokenLength()));
     ackPDU->setType(CoapPDU::COAP_ACKNOWLEDGEMENT);
     transmitOnly(ackPDU);
     delete ackPDU;
@@ -210,17 +200,17 @@ int coap_client_transaction::update(CoapPDU *recvPDU){
         }
     }
     else{ //Its just a regular piggibacked ack
-        if(recvPDU->getPayloadLength()){
+        enum CoapPDU::ContentFormat ct = CoapPDU::COAP_CONTENT_FORMAT_TEXT_PLAIN;
+        //Handle single messages
+        if(coap::parse_contentformat(recvPDU, &ct) == 1){
+            ct = req_ct;
+        }
 
-            //Handle single messages
-            enum CoapPDU::ContentFormat ct;
-            if(coap::parse_contentformat(recvPDU, &ct) == 1){
-                ct = req_ct;
-            }
-            interface->parseMessage(QByteArray::fromRawData(reinterpret_cast<const char*>(recvPDU->getTokenPointer()), recvPDU->getTokenLength()), QByteArray::fromRawData((char*)recvPDU->getPayloadPointer(), recvPDU->getPayloadLength()), code, ct);
+        if(recvPDU->getPayloadLength()){
+            interface->parseMessage(QByteArray::fromRawData(reinterpret_cast<const char*>(recvPDU->getTokenPointer()), recvPDU->getTokenLength()), QByteArray::fromRawData(reinterpret_cast<char*>(recvPDU->getPayloadPointer()), recvPDU->getPayloadLength()), code, ct);
         }
         else{
-            //handleReturnCode(storedPDUdata->tokenref, code);
+            interface->parseMessage(QByteArray::fromRawData(reinterpret_cast<const char*>(recvPDU->getTokenPointer()), recvPDU->getTokenLength()), QByteArray(), code, ct);
         }
     }
 
@@ -230,7 +220,7 @@ int coap_client_transaction::update(CoapPDU *recvPDU){
         options = coap::check_option(pdu, CoapPDU::COAP_OPTION_CONTENT_FORMAT);
         if(options){
             if(options->optionValueLength > 0){
-                txPDU->setContentFormat((enum CoapPDU::ContentFormat)*options->optionValuePointer);
+                txPDU->setContentFormat(static_cast<enum CoapPDU::ContentFormat>(*options->optionValuePointer));
             }
         }
 
@@ -249,5 +239,9 @@ int coap_client_transaction::update(CoapPDU *recvPDU){
         sendACK(recvPDU);
     }
     return ret;
+}
+
+void coap_client_transaction::notResponding(){
+    interface->noResponse();
 }
 

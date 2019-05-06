@@ -18,7 +18,8 @@ DEFINES += QT_DEPRECATED_WARNINGS
 SOURCES += \
         main.cpp \
     suapp.cpp \
-    rdserver.cpp
+    rdserver.cpp \
+    config.cpp
 
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin
@@ -30,4 +31,6 @@ INCLUDEPATH += ../../libs/sensorsunleashed
 
 HEADERS += \
     suapp.h \
-    rdserver.h
+    rdserver.h \
+    config.h \
+    credentials.h

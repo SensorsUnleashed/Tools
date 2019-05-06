@@ -19,7 +19,6 @@ coap_transmit::coap_transmit(QHostAddress addr, quint16 port){
 }
 
 coap_transmit::~coap_transmit(){
-     qDebug() << "delete";
     delete acktimer;
     delete cleanuptimer;
 }
@@ -58,7 +57,6 @@ void coap_transmit::resetTimeout(){
 }
 
 void coap_transmit::timeout(){
-    qDebug() << "Timeout";
     if(retransmission_count++ <= retransmissions){
         coap_engine* conn = coap_engine::getInstance();
         conn->send(addr, pdu->getPDUPointer(), pdu->getPDULength(), port);
@@ -72,8 +70,6 @@ void coap_transmit::timeout(){
 
 void coap_transmit::cleanupTimeout(){
     emit tx_timeout();
-
-    qDebug() << "Clean up";
 }
 
 void coap_transmit::done(){

@@ -19,7 +19,6 @@ coap_observer::coap_observer(CoapPDU *recvPDU, coap_resource *res, QHostAddress 
 
 CoapPDU* coap_observer::prepare(CoapPDU* response){
 
-    //response->setCode(initialPDU->getCode());
     response->setToken(initialPDU->getTokenPointer(), static_cast<uint8_t>(initialPDU->getTokenLength()));
     response->setType(initialPDU->getType());
     response->setMessageID(++messageid);

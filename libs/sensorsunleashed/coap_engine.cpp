@@ -1,12 +1,10 @@
 #include "coap_engine.h"
 
-#define DEFAULT_COAP_PORT   5683
 bool coap_engine::instanceFlag = false;
 coap_engine* coap_engine::coapEngine = nullptr;
 
 coap_engine::coap_engine()
 {
-    qDebug() << "coap_engine created";
 }
 
 coap_engine* coap_engine::getInstance()
@@ -23,9 +21,9 @@ coap_engine* coap_engine::getInstance()
     }
 }
 
-void coap_engine::addServerInstance(coap_server* ref){
+void coap_engine::addServerInstance(coap_server* ref, quint16 port){
     serverref = ref;
-    bindTo(DEFAULT_COAP_PORT);
+    bindTo(port);
 }
 
 void coap_engine::rmServerInstance(coap_server* ref){
@@ -49,6 +47,24 @@ void coap_engine::transactionTimeout(){
             return;
         }
     }
+}
+
+void coap_engine::removeZombieTransactions(QHostAddress addr, quint16 port){
+    /* Find out if a transaction is ongoing with this particular pdu */
+    int done;
+    do{
+        done = 1;
+        for(int i=0; i<transactionList.count(); i++){
+            if(transactionList[i]->getPort() == port){
+                if(transactionList[i]->getAddr() == addr){
+                    delete transactionList[i];
+                    transactionList.remove(i);
+                    done = 0;
+                    break;
+                }
+            }
+        }
+    }while(!done);
 }
 
 void coap_engine::receive(QHostAddress addr, QByteArray datagram, quint16 port){

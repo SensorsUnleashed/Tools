@@ -19,6 +19,9 @@ public:
     void transmitOnly(CoapPDU* pdu);
     void done();
 
+    quint16 getPort(){ return port; }
+    QHostAddress getAddr(){ return addr; }
+
 protected:
     QHostAddress addr;
     quint16 port;
@@ -56,8 +59,6 @@ public:
     virtual int update(CoapPDU *recvPDU){ Q_UNUSED(recvPDU); qDebug() << "coap_transaction::update Implement this!"; return 0;}
 
 protected:
-    QByteArray uri;
-
     suinterface* interface = nullptr;
     CoapPDU *pdu;
     enum CoapPDU::ContentFormat req_ct = CoapPDU::COAP_CONTENT_FORMAT_TEXT_PLAIN;
@@ -75,6 +76,9 @@ public:
     int update(CoapPDU *recvPDU);
 
 protected:
+        QByteArray uri;
+    void notResponding();
+
     coap_blocktransfer* block1 = nullptr;
     coap_blockrx* block2 = nullptr;
 };

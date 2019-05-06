@@ -34,22 +34,6 @@ int main(int argc, char *argv[])
     parser.addOption(methodOption);
     parser.addOption(obsOption);
 
-
-    // A boolean option with a single name (-p)
-    //QCommandLineOption showProgressOption("p", QCoreApplication::translate("main", "Show progress during copy"));
-    //parser.addOption(showProgressOption);
-
-    // A boolean option with multiple names (-f, --force)
-    //QCommandLineOption forceOption(QStringList() << "f" << "force",
-    //                               QCoreApplication::translate("main", "Overwrite existing files."));
-    //parser.addOption(forceOption);
-
-    // An option with a value
-    //QCommandLineOption targetDirectoryOption(QStringList() << "t" << "target-directory",
-    //                                         QCoreApplication::translate("main", "Copy all source files into <directory>."),
-    //                                         QCoreApplication::translate("main", "directory"));
-    //parser.addOption(targetDirectoryOption);
-
     // Process the actual command line arguments given by the user
     parser.process(a);
 
@@ -62,25 +46,16 @@ int main(int argc, char *argv[])
         exit(-1);
     }
 
-
-    // source is args.at(0), destination is args.at(1)
-
-    //bool showProgress = parser.isSet(showProgressOption);
-    //bool force = parser.isSet(forceOption);
-    //  QString targetDir = parser.value(targetDirectoryOption);
-    // ...
-
-    suapp su(&url);
-
     CoapPDU* pdu = new CoapPDU();
 
-    char* uristring = url.path().toLatin1().data();
-    pdu->setURI(uristring, strlen(uristring));
+    QString u = url.path();
 
     if(url.hasQuery()){
-        char* query = url.query().toLatin1().data();
-        pdu->addURIQuery(query);
+        u += '?';
+        u += url.query();
     }
+    char* uristring = u.toLatin1().data();
+    pdu->setURI(uristring, strlen(uristring));
 
     pdu->setType(CoapPDU::COAP_CONFIRMABLE);
 
@@ -110,7 +85,7 @@ int main(int argc, char *argv[])
     pdu->addOption(CoapPDU::COAP_OPTION_CONTENT_FORMAT,1,reinterpret_cast<uint8_t*>(&ct));
     pdu->setMessageID(1);
 
-    su.request(pdu, 0);
+    suapp su(pdu, parser.isSet(obsOption), QHostAddress(url.host()), static_cast<quint16>((url.port(5683))));
 
     return a.exec();
 }

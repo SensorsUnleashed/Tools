@@ -2,38 +2,57 @@
 #include <QRandomGenerator>
 #include <coap_transaction.h>
 #include <QCoreApplication>
+#include <coap_engine.h>
 
-suapp::suapp(QUrl* url) : suinterface(QHostAddress(url->host()), static_cast<uint16_t>((url->port(5683))))
+suapp::suapp(CoapPDU* pdu, bool obs, QHostAddress addr, quint16 port) : suinterface(addr, port)
 {
-    qDebug() << url->scheme();
-    qDebug() << url->host();
-    qDebug() << url->port();
-    qDebug() << url->path();
+    startpdu = new CoapPDU();
+    coap::copyPDU(pdu, startpdu);
+
+    if(obs){
+        startObsServer();
+    }
+    token = request(pdu, 0);
 }
 
 suapp::~suapp(){
 
 }
 
+void suapp::startObsServer(){
+    qDebug() << "Observing";
+    s = new obsserver(this);
+}
+
+void suapp::obsNotifyRestart(QHostAddress addr, quint16 port){
+    qDebug() << "Restart observers to " << addr << " port " << port;
+    coap_engine* conn = coap_engine::getInstance();
+    conn->removeZombieTransactions(addr, port);
+
+    CoapPDU* tmp = new CoapPDU();
+    coap::copyPDU(startpdu, tmp);
+    token = request(tmp, 0);
+}
+
 QVariant suapp::parseTextPlainFormat(QByteArray token, QByteArray payload){
     Q_UNUSED(token);
-    qDebug() << "suapp::parseTextPlainFormat ";
-    qDebug() << payload;
-    QCoreApplication::quit();
+    qDebug() << "RXPayload: " << payload;
+
+    if(!s) QCoreApplication::quit();
     return QVariant(0);
 }
 
 QVariant suapp::parseAppLinkFormat(QByteArray token, QByteArray payload) {
     Q_UNUSED(token); qDebug() << "suapp::parseAppLinkFormat Implement this";
     qDebug() << payload;
-    QCoreApplication::quit();
+    if(!s) QCoreApplication::quit();
     return QVariant(0);
 }
 
 QVariant suapp::parseAppXmlFormat(QByteArray token, QByteArray payload) {
     Q_UNUSED(token); qDebug() << "suapp::parseAppXmlFormat Implement this";
     qDebug() << payload;
-    QCoreApplication::quit();
+    if(!s) QCoreApplication::quit();
     return QVariant(0);
 }
 
@@ -41,19 +60,19 @@ QVariant suapp::parseAppOctetFormat(QByteArray token, QByteArray payload, CoapPD
     Q_UNUSED(payload); Q_UNUSED(token); Q_UNUSED(code);
     suValue val(payload);
     qDebug() << val.toString();
-    //QCoreApplication::quit();
+    if(!s) QCoreApplication::quit();
     return QVariant(0);
 }
 
 QVariant suapp::parseAppExiFormat(QByteArray token, QByteArray payload) {
     Q_UNUSED(payload); Q_UNUSED(token); qDebug() << "suapp::parseAppExiFormat Implement this";
-    QCoreApplication::quit();
+    if(!s) QCoreApplication::quit();
     return QVariant(0);
 }
 
 QVariant suapp::parseAppJSonFormat(QByteArray token, QByteArray payload) {
     Q_UNUSED(token); qDebug() << "suapp::parseAppJSonFormat Implement this";
     qDebug() << payload;
-    QCoreApplication::quit();
+    if(!s) QCoreApplication::quit();
     return QVariant(0);
 }

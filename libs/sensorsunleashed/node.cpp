@@ -83,6 +83,7 @@ QVariant node::parseAppLinkFormat(QByteArray token, QByteArray payload){
         coap_resource* r = new coap_resource(rlist.at(i));
         addSensor(r);
     }
+    emit linkParsingDone();
     this->token = 0;
     return QVariant(0);
 }

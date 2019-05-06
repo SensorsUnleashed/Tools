@@ -20,7 +20,7 @@ socket::~socket()
 
 void socket::bindTo(quint16 port){
     if(udpSocket->bind(QHostAddress::AnyIPv6, port)){
-        qDebug() << "Successfully bound to port" << port;
+        qDebug() << "Successfully bound to port" << udpSocket->localPort();
         bound = true;
     }
     else{

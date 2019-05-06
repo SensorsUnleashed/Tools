@@ -19,7 +19,7 @@ public:
 
     virtual void handleGET(CoapPDU *request, CoapPDU *response, QByteArray* payload){ Q_UNUSED(request); Q_UNUSED(response); Q_UNUSED(payload); qDebug() << "Implement handleGET";}
     virtual void handlePOST(CoapPDU *request, CoapPDU *response){ Q_UNUSED(request); Q_UNUSED(response); qDebug() << "Implement handlePOST";}
-    virtual void handlePUT(CoapPDU *request, CoapPDU *response){ Q_UNUSED(request); Q_UNUSED(response); qDebug() << "Implement handlePUT";}
+    virtual void handlePUT(CoapPDU *request, CoapPDU *response, QHostAddress addr, quint16 port){ Q_UNUSED(request); Q_UNUSED(response); qDebug() << "Implement handlePUT";}
     virtual void handleDELETE(CoapPDU *request, CoapPDU *response){ Q_UNUSED(request); Q_UNUSED(response); qDebug() << "Implement handleDELETE";}
 
 private:

@@ -46,9 +46,10 @@ public:
 
     static coap_engine* getInstance();
 
-    void addServerInstance(coap_server* ref);
+    void addServerInstance(coap_server* ref, quint16 port);
     void rmServerInstance(coap_server* ref);
 
+    void removeZombieTransactions(QHostAddress addr, quint16 port);
     void transactionListAdd(coap_transaction* transaction);
 
     void receive(QHostAddress addr, QByteArray datagram, quint16 port);

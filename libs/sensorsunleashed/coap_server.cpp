@@ -7,12 +7,12 @@
 #include <QUrlQuery>
 #include <coap.h>
 
-coap_server::coap_server()
+coap_server::coap_server(quint16 port)
 {
     coap_engine* en = coap_engine::getInstance();
     core = new res_core_well_known(this);
     addResource(core);
-    en->addServerInstance(this);
+    en->addServerInstance(this, port);
 }
 
 coap_server::~coap_server(){
@@ -56,7 +56,9 @@ coap_transaction* coap_server::getHandler(CoapPDU *recvPDU, QHostAddress addr, q
             remove_observer_by_uri(res, addr, port);
             coap_observer* c = new coap_observer(recvPDU, res, addr, port);
             c->prepare(response);
-            observers.append(c);
+            /* The first message is just an ack on the request, next the type is as what the client requested */
+            response->setType(CoapPDU::COAP_ACKNOWLEDGEMENT);
+            add_observer(c, addr, port);
         }
         else if(observe == 1){ //De-register observer
             remove_observer_by_uri(res, addr, port);
@@ -65,6 +67,7 @@ coap_transaction* coap_server::getHandler(CoapPDU *recvPDU, QHostAddress addr, q
     }
     else{   //Unknown resource
     }
+
     return new coap_server_transaction(addr, port, response, this, *&payload);
 }
 
@@ -79,10 +82,15 @@ coap_transaction* coap_server::postHandler(CoapPDU *recvPDU, QHostAddress addr, 
 }
 coap_transaction* coap_server::putHandler(CoapPDU *recvPDU, QHostAddress addr, quint16 port){
     CoapPDU* response = new CoapPDU;
+
+    response->setToken(recvPDU->getTokenPointer(), static_cast<uint8_t>(recvPDU->getTokenLength()));
+    response->setType(CoapPDU::COAP_ACKNOWLEDGEMENT);
+    response->setMessageID(recvPDU->getMessageID()+1);
+
     QByteArray payload;
     coap_resource* res = findResource(recvPDU);
     if(res){
-        res->handlePUT(recvPDU, response);
+        res->handlePUT(recvPDU, response, addr, port);
     }
     return new coap_server_transaction(addr, port, response, this, *&payload);
 }
@@ -97,13 +105,18 @@ coap_transaction* coap_server::deleteHandler(CoapPDU *recvPDU, QHostAddress addr
 }
 
 coap_resource* coap_server::findResource(CoapPDU *PDU){
-    char dst[50] = {0};
+    char dst[200] = {0};
     int outLen;
     coap_resource* res = nullptr;
-    if(PDU->getURI(dst, 50, &outLen) == 0){
-        QUrl reqUrl(dst);
+    if(PDU->getURI(dst, 200, &outLen) == 0){
+        //Remove leading '/'
+        char* dstptr = &dst[0];
+//        while(*dstptr == '/') dstptr++;
+        QUrl reqUrl(dstptr);
+        reqUrl = reqUrl.adjusted(QUrl::NormalizePathSegments);
         for(int i=0; i<resources.count(); i++){
             QUrl resUrl(resources[i]->getUri());
+            resUrl = resUrl.adjusted(QUrl::NormalizePathSegments);
             if(reqUrl.path() == resUrl.path()){
                 res = resources[i];
                 break;
@@ -113,8 +126,15 @@ coap_resource* coap_server::findResource(CoapPDU *PDU){
     return res;
 }
 
+/* This is triggered if the device is not responding at all - we asume it to be off */
 void coap_server::receiverNotResponding(QHostAddress addr, quint16 port){
     remove_observer_by_addr(addr, port);
+    observerLost(addr, port);
+}
+
+void coap_server::add_observer(coap_observer* obs, QHostAddress addr, quint16 port){
+    observers.append(obs);
+    observerAdded(addr, port);
 }
 
 /* Remove all observers, no matter which */
@@ -165,7 +185,7 @@ void coap_server::handleObservers(coap_resource* res){
 void coap_server::handleGET(CoapPDU *request, CoapPDU *response, QByteArray *payload){
     Q_UNUSED(request);
     enum CoapPDU::ContentFormat ct = CoapPDU::COAP_CONTENT_FORMAT_TEXT_PLAIN;
-    response->setCode(CoapPDU::COAP_BAD_REQUEST);
+    response->setCode(CoapPDU::COAP_NOT_FOUND);
     response->addOption(CoapPDU::COAP_OPTION_CONTENT_FORMAT,1,reinterpret_cast<uint8_t*>(&ct));
     payload->append("Resource unknown");
 }

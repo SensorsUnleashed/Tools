@@ -33,7 +33,7 @@ class coap_server : public QObject
     Q_OBJECT
 
 public:
-    coap_server();
+    coap_server(quint16 port = DEFAULT_COAP_PORT);
     virtual ~coap_server();
 
     coap_transaction* getHandler(CoapPDU *recvPDU, QHostAddress addr, quint16 port);
@@ -42,6 +42,7 @@ public:
     coap_transaction* deleteHandler(CoapPDU *recvPDU, QHostAddress addr, quint16 port);
     coap_resource* findResource(CoapPDU *PDU);
 
+    void add_observer(coap_observer* c, QHostAddress addr, quint16 port);
     void addResource(coap_resource* resource);
     coap_resource* getResource(int index);
     void handleObservers(coap_resource* res);
@@ -60,6 +61,9 @@ protected:
     virtual void handlePOST(CoapPDU *request, CoapPDU *response);
     virtual void handlePUT(CoapPDU *request, CoapPDU *response);
     virtual void handleDELETE(CoapPDU *request, CoapPDU *response);
+
+    virtual void observerLost(QHostAddress addr, quint16 port) { Q_UNUSED(addr); Q_UNUSED(port);}
+    virtual void observerAdded(QHostAddress addr, quint16 port) { Q_UNUSED(addr); Q_UNUSED(port);}
 };
 
 #endif // COAP_SERVER_H

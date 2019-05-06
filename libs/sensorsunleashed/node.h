@@ -59,6 +59,7 @@ public:
     QByteArray request(CoapPDU *pdu, int req, QByteArray payload = nullptr);
 
     void parseMessage(QByteArray token, QByteArray message, CoapPDU::Code code, enum CoapPDU::ContentFormat ct);
+    virtual void noResponse() {}
 
     QHostAddress getAddress() { return addr; }
     quint16 getPort() { return port; }
@@ -82,6 +83,7 @@ protected:
     virtual QVariant parseAppOctetFormat(QByteArray token, QByteArray payload, CoapPDU::Code code) { Q_UNUSED(payload); Q_UNUSED(token); Q_UNUSED(code); qDebug() << "wsn::parseAppOctetFormat Implement this"; return QVariant(0);}
     virtual QVariant parseAppExiFormat(QByteArray token, QByteArray payload) { Q_UNUSED(payload); Q_UNUSED(token); qDebug() << "wsn::parseAppExiFormat Implement this"; return QVariant(0);}
     virtual QVariant parseAppJSonFormat(QByteArray token, QByteArray payload) { Q_UNUSED(payload); Q_UNUSED(token); qDebug() << "wsn::parseAppJSonFormat Implement this"; return QVariant(0);}
+    virtual void handleError(QByteArray token, QByteArray message, CoapPDU::Code code, enum CoapPDU::ContentFormat ct);
 
 private:
     QHash<QByteArray, int> tokenref;
@@ -279,6 +281,7 @@ private:
 signals:
     void sensorCreated(sensor*);
     void sensorFound(QVariant sensorinfo, QVariant source);
+    void linkParsingDone();
     void requst_received(QString req, QVariantList result);
     void commStatusChanged();
 public slots:

@@ -16,7 +16,8 @@ DEFINES += QT_DEPRECATED_WARNINGS
 
 SOURCES += \
         main.cpp \
-    suapp.cpp
+    suapp.cpp \
+    obsserver.cpp
 
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin
@@ -27,4 +28,5 @@ unix:!macx: LIBS += -L$${OUT_PWD}/../../libs/sensorsunleashed -lsensorsunleashed
 INCLUDEPATH += ../../libs/sensorsunleashed
 
 HEADERS += \
-    suapp.h
+    suapp.h \
+    obsserver.h

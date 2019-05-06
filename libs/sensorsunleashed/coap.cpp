@@ -1,4 +1,5 @@
 #include "coap.h"
+#include <QByteArray>
 
 CoapPDU::CoapOption* coap::check_option(CoapPDU *pdu, enum CoapPDU::Option opt){
     CoapPDU::CoapOption* options = pdu->getOptions();
@@ -39,8 +40,11 @@ int coap::parse_contentformat(CoapPDU* pdu, enum CoapPDU::ContentFormat* ct){
     if(options != nullptr){
         if(options->optionValueLength > 0){
             *ct = static_cast<enum CoapPDU::ContentFormat>(*options->optionValuePointer);
-            return 0;
         }
+        else{
+            *ct = CoapPDU::COAP_CONTENT_FORMAT_TEXT_PLAIN;
+        }
+        return 0;
     }
 
     return 1;
@@ -101,3 +105,30 @@ int coap::calc_block_option(uint8_t more, uint32_t num, uint32_t msgsize, uint8_
 
     return 0;
 }
+
+int coap::copyPDU(CoapPDU* src, CoapPDU* dst){
+    dst->setCode(src->getCode());
+    dst->setToken(src->getTokenPointer(), static_cast<uint8_t>(src->getTokenLength()));
+    dst->setMessageID(src->getMessageID());
+
+    CoapPDU::CoapOption* options = nullptr;
+    options = coap::check_option(src, CoapPDU::COAP_OPTION_OBSERVE);
+    if(options != nullptr){
+        dst->addOption(CoapPDU::COAP_OPTION_OBSERVE, options->optionValueLength, options->optionValuePointer);
+    }
+
+    options = coap::check_option(src, CoapPDU::COAP_OPTION_CONTENT_FORMAT);
+    if(options != nullptr){
+        dst->addOption(CoapPDU::COAP_OPTION_CONTENT_FORMAT, options->optionValueLength, options->optionValuePointer);
+    }
+
+    QByteArray uri;
+    uri.resize(200);
+    int urilen;
+    src->getURI(uri.data(), 200, &urilen);
+    uri.resize(urilen);
+    dst->setURI(uri.data(), static_cast<size_t>(uri.length()));
+
+    return 0;
+}
+
