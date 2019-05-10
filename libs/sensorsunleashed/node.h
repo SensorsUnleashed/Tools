@@ -100,6 +100,9 @@ public:
 
     node* getParent(){ return parent;}
     QByteArray getUri(){ return resource->getUri(); }
+    int getID(){ return resource->getID();}
+    void setID(int id){ resource->setID(id);}
+    int getType(){ return deviceType; }
 
     void initSensor();
     void requestRangeMin();
@@ -140,6 +143,16 @@ public:
     suValue* getMaxLimit(){ return nRangeMax; }
     suValue* getMinLimit(){ return nRangeMin; }
 
+    enum DeviceType{
+        pulseCounter = 1,
+        timer,
+        pushbutton,
+        ledIndicator,
+        powerRelay,
+
+        unkownDeviceType = 0xff,
+    };
+
 protected:
 
     suValue* neventsActive = nullptr;		//All events on or Off
@@ -149,6 +162,8 @@ protected:
     suValue* nChangeEvent = nullptr;	//When value has changed more than changeEvent + lastevent value <>= value
     suValue* nRangeMin = nullptr;	//What is the minimum value this device can read
     suValue* nRangeMax = nullptr;	//What is the maximum value this device can read
+
+    int deviceType = unkownDeviceType;
 
 private:
     node* parent;
@@ -175,7 +190,7 @@ class SENSORSUNLEASHEDSHARED_EXPORT timerdevice : public sensor {
     Q_OBJECT
 public:
     timerdevice(node* parent, coap_resource* resource) : sensor(parent, resource){
-
+        deviceType = timer;
     }
 
     QVariant getClassType(){ return "TimerDevice.qml"; }
@@ -190,8 +205,8 @@ class SENSORSUNLEASHEDSHARED_EXPORT defaultdevice : public sensor {
     Q_OBJECT
 
 public:
-    defaultdevice(node *parent, coap_resource* resource) : sensor(parent, resource){
-
+    defaultdevice(node *parent, coap_resource* resource, enum DeviceType type) : sensor(parent, resource){
+        deviceType = type;
     }
 
     QVariant getClassType(){ return "DefaultDevice.qml"; }
@@ -199,13 +214,17 @@ public:
     void setToggle();
     void setOn();
     void setOff();
+
+private:
 };
 
 class SENSORSUNLEASHEDSHARED_EXPORT pulsecounter : public sensor {
     Q_OBJECT
 
 public:
-    pulsecounter(node *parent, coap_resource* resource);
+    pulsecounter(node *parent, coap_resource *resource) : sensor(parent, resource){
+        deviceType = pulseCounter;
+    }
 
     QVariant getClassType(){ return "DefaultDevice.qml"; }
     int8_t getValueType(){ return CMP_TYPE_UINT16; }
@@ -221,6 +240,9 @@ class SENSORSUNLEASHEDSHARED_EXPORT node : public suinterface
     Q_PROPERTY(commStatus commStatus READ getCommStatus NOTIFY commStatusChanged)
 public:
     node(QHostAddress addr, quint16 port = 5683);
+
+    void setID(int id){ this->id = id; }
+    int getID(){ return id; }
 
     QVariant getDatabaseinfo(){ return databaseinfo; }
     void requestLinks();
@@ -260,6 +282,8 @@ public:
         emit commStatusChanged();
     }
 
+    void addSensor(coap_resource* resource);
+
 protected:
     QString uri;
     commStatus m_commStatus;
@@ -271,12 +295,11 @@ private:
     QDateTime lastSeen;
     QVariantMap databaseinfo;
     QVector<sensor*> sensors;
+    int id = -1;
 
     uint8_t prefix_len;
 
     QByteArray coreLinks;
-
-    void addSensor(coap_resource* resource);
 
 signals:
     void sensorCreated(sensor*);

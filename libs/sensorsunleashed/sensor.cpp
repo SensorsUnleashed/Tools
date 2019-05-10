@@ -527,10 +527,6 @@ QVariant sensor::parseAppOctetFormat(QByteArray token, QByteArray payload, CoapP
     return QVariant(0);
 }
 
-pulsecounter::pulsecounter(node *parent, coap_resource *resource) : sensor(parent, resource){
-
-}
-
 /*************** Helpers ******************************************/
 
 QVariant cmpobjectToVariant(cmp_object_t obj, cmp_ctx_t* cmp){

@@ -12,7 +12,7 @@ class suapp : public coap_server
 {
     Q_OBJECT
 public:
-    suapp();
+    suapp(config* configuration);
     virtual ~suapp();
 
     void observerLost(QHostAddress addr, quint16 port);
@@ -20,11 +20,12 @@ public:
 
 private:
     config* configuration;
-    QHash<suValue*, coap_resource*> observees;
-    QVector<obsdevice*>* list;
-    int observersLost = 0;
+    QHash<suValue*, su_resource*> observees;
+    QVector<obsdevice*>* observerList;
+    int nodeDataPending = 0;
 
     void notifyLost();
+    void addNode(node* n);
 
 private slots:
     void linksParsed();
@@ -47,8 +48,10 @@ public:
 
     }
 
+    sensor* getSensor(){ return s; }
+
 private:
-    sensor* s;
+    sensor* s = nullptr;
 
     QByteArray getUri(){
         QString ip = s->getAddress().toString();

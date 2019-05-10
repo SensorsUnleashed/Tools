@@ -113,15 +113,15 @@ void node::addSensor(coap_resource* resource){
         else if(uri.compare("su/timer") == 0){
             s = new timerdevice(this, resource);
         }
-        else if(
-                uri.compare("su/powerrelay") == 0 ||
-                uri.compare("su/ledindicator") == 0 ||
+        else if(uri.compare("su/ledindicator") == 0 ||
                 uri.compare("su/led_yellow") == 0 ||
                 uri.compare("su/led_red") == 0 ||
                 uri.compare("su/led_orange") == 0 ||
-                uri.compare("su/led_green") == 0
-                ){
-            s = new defaultdevice(this, resource);
+                uri.compare("su/led_green") == 0){
+            s = new defaultdevice(this, resource, sensor::ledIndicator);
+        }
+        else if(uri.compare("su/powerrelay") == 0){
+            s = new defaultdevice(this, resource, sensor::powerRelay);
         }
         else{
             s = new sensor(this, resource);

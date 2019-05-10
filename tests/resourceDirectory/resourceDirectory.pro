@@ -18,7 +18,6 @@ DEFINES += QT_DEPRECATED_WARNINGS
 SOURCES += \
         main.cpp \
     suapp.cpp \
-    rdserver.cpp \
     config.cpp
 
 # Default rules for deployment.
@@ -31,6 +30,5 @@ INCLUDEPATH += ../../libs/sensorsunleashed
 
 HEADERS += \
     suapp.h \
-    rdserver.h \
     config.h \
     credentials.h

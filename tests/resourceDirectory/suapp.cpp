@@ -2,43 +2,41 @@
 #include <QHostAddress>
 #include <QUrl>
 
-suapp::suapp()
+suapp::suapp(config *configuration)
 {
-    configuration = new config();
+    this->configuration = configuration;
 
-    list = new QVector<obsdevice*>();
-    configuration->getObserversList(list);
+    observerList = new QVector<obsdevice*>();
+    configuration->getObserversList(observerList);
 
-#if 1
-    node* n1 = new node(QHostAddress("fd00::212:4b00:3d0:a448"));   observersLost++;
-    node* n2 = new node(QHostAddress("fd00::212:4b00:5af:82b7"));   observersLost++;
+    QVector<nodeinfo*> nodelist;
+    configuration->getNodes(&nodelist);
 
-    //    sensor* s1 = new sensor("fd00::212:4b00:3d0:a448", "su/pulsecounter");
-    //    su_resource* r = new su_resource(s1);
-    //    addResource(r);
+    for(int i=0; i<nodelist.count(); i++){
+        node* n= new node(nodelist.at(i)->addr, nodelist.at(i)->port);
+        n->setID(nodelist.at(i)->nodeid);
+        connect(n, SIGNAL(sensorCreated(sensor*)), this, SLOT(sensorCreated(sensor*)));
 
-    //    sensor* s2 = new sensor("fd00::212:4b00:5af:82b7", "dev/test2");
-    //    su_resource* r2 = new su_resource(s2);
-    //    addResource(r2);
+        QVector<deviceinfo*> devicelist;
+        configuration->getDevices(nodelist.at(i)->nodeid, &devicelist);
+        if(devicelist.isEmpty()){
+            n->requestLinks();
+            connect(n, SIGNAL(linkParsingDone()), this, SLOT(linksParsed()));
+        }
+        else{
+            nodeDataPending--;
+            for(int j=0; j<devicelist.count(); j++){
+                coap_resource* r = new coap_resource();
+                r->setUri(devicelist.at(j)->uri);
+                r->setID(devicelist.at(j)->deviceid);
+                n->addSensor(r);
+            }
+        }
+    }
 
-    //    sensor* s3 = new sensor("fd00::212:4b00:5af:82b7", "dev/test3");
-    //    su_resource* r3 = new su_resource(s3);
-    //    addResource(r3);
-
-    //    sensor* s4 = new sensor("fd00::212:4b00:5af:82b7", "dev/test4");
-    //    su_resource* r4 = new su_resource(s4);
-    //    addResource(r4);
-
-    n1->requestLinks();
-    n2->requestLinks();
-
-    connect(n1, SIGNAL(sensorCreated(sensor*)), this, SLOT(sensorCreated(sensor*)));
-    connect(n2, SIGNAL(sensorCreated(sensor*)), this, SLOT(sensorCreated(sensor*)));
-
-    connect(n1, SIGNAL(linkParsingDone()), this, SLOT(linksParsed()));
-    connect(n2, SIGNAL(linkParsingDone()), this, SLOT(linksParsed()));
-
-#endif
+    if(observerList->count()){
+        notifyLost();
+    }
 
 }
 
@@ -47,28 +45,29 @@ suapp::~suapp(){
 }
 
 void suapp::notifyLost(){
-    if(--observersLost > 0){
+    if(nodeDataPending){
         return;
     }
 
     int done;
     do{
         done = 0;
-        if(list->count()){
-            new notify(this, list->first()->addr, list->first()->port);
-            delete list->first();
-            list->removeFirst();
+        if(observerList->count()){
+            new notify(this, observerList->first()->addr, observerList->first()->port);
+            delete observerList->first();
+            observerList->removeFirst();
             done = 1;
         }
     }while(done);
 }
 
+/* Called when we asked a node for its resources */
 void suapp::linksParsed(){
-    if(observersLost){
-        notifyLost();
-    }
+    nodeDataPending--;
+    notifyLost();
 }
 
+/* Called when a node has created a new device */
 void suapp::sensorCreated(sensor* s){
     su_resource* r = new su_resource(s);
     addResource(r);
@@ -79,13 +78,21 @@ void suapp::sensorCreated(sensor* s){
         connect(v, SIGNAL(valueChanged()), this, SLOT(sensorValueChanged()));
         observees[v] = r;
     }
+
+    if(s->getID() < 0){
+        s->setID(configuration->addDevice(s->getParent()->getID(), s->getUri(), s->getType()));
+    }
 }
 
+/* Called when a device has changed its main value */
 void suapp::sensorValueChanged(){
     suValue* v = static_cast<suValue*>(QObject::sender());
 
-    coap_resource* r = observees[v];
-    qDebug() << "sensorValueChanged:: " << r->getUri() << ": " << v->toString();
+    su_resource* r = observees[v];
+    sensor* s = r->getSensor();
+    qDebug() << "sensorValueChanged:: " << s->getUri() << ": " << v->toString();
+    configuration->insertNewData(s->getID(), v->toString());
+
     handleObservers(r);
 }
 
